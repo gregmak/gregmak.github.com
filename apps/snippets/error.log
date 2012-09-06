@@ -1,0 +1,15 @@
+12/09/04 14:34:23.26 [info]: snippets DbGen/Mongo/SynchroStart Opening database
+12/09/04 14:34:23.26 [notice]: DbGen/Mongo Looking for MongoDB in directory '/home/gregmak/.opa/mongo'
+12/09/04 14:34:23.28 [notice]: DbGen/Mongo MongoDB seems launched (pid:9587)
+12/09/04 14:34:23.28 [info]: MongoDriver.open localhost:27017
+12/09/04 14:34:23.28 [info]: snippets DbGen/Mongo/SynchroStart Db is ready
+12/09/04 14:34:23.29 [info]: snippets DbGen/Mongo/SynchroStart Process 0 operations on the db wait list, start
+12/09/04 14:34:23.29 [info]: snippets DbGen/Mongo/SynchroStart Process 0 operations on the db wait list, finished
+12/09/04 14:34:59.88 [info]: snippets DbGen/Mongo/SynchroStart Opening database
+12/09/04 14:34:59.88 [notice]: DbGen/Mongo Looking for MongoDB in directory '/home/gregmak/.opa/mongo'
+12/09/04 14:34:59.88 [notice]: DbGen/Mongo Launching MongoDB with --pidfilepath /tmp/opaMongo.pid --noprealloc --bind_ip 0.0.0.0 --dbpath /home/gregmak/.opa/mongo/data --fork --logpath /home/gregmak/.opa/mongo/mongo.log
+12/09/04 14:35:00.94 [notice]: DbGen/Mongo MongoDB seems launched (pid:17554)
+12/09/04 14:35:00.95 [info]: MongoDriver.open localhost:27017
+12/09/04 14:35:00.95 [info]: snippets DbGen/Mongo/SynchroStart Db is ready
+12/09/04 14:35:00.95 [info]: snippets DbGen/Mongo/SynchroStart Process 0 operations on the db wait list, start
+12/09/04 14:35:00.95 [info]: snippets DbGen/Mongo/SynchroStart Process 0 operations on the db wait list, finished
