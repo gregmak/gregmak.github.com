@@ -1,0 +1,16 @@
+TITRE :
+Nouveau JS snippet
+
+CODE :
+###Le code :
+
+Ce code affiche des messages dans la **console** du navigateur.
+
+    fuction hello(msg) {
+      console.log("message", msg);
+    }
+
+    // Génial, non ?
+
+USER :
+gregmak

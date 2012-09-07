@@ -1,0 +1,11 @@
+#main {
+	margin-top: 50px;
+}
+
+textarea {
+    width: 100%;
+}
+
+input.snippet-id {
+    width: 20px;
+}

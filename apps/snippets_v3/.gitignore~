@@ -1,0 +1,6 @@
+apps/snippets/_build/
+apps/snippets/_tracks/
+apps/snippets/snippets.exe
+apps/snippets/snippets_depends/node_modules/snippets.controller.opx/_tracks/
+apps/snippets/snippets_depends/node_modules/snippets.model.opx/_tracks/
+apps/snippets/snippets_depends/node_modules/snippets.view.opx/_tracks/

@@ -1,0 +1,268 @@
+<div id="part2"></div>
+##Manipulation du DOM.
+
+Dans ce nouveau tutoriel sur **Opa**, nous allons voir comment construire facilement une interface utilisateur et comment manipuler des objets du DOM pour apporter des modifications à cette interface.
+
+Nous reprenons et modifions l'exemple vu dans le précédent tutoriel sur les web-services de type **REST** : la création de *snippets*.
+
+####Le modèle.
+
+Le modèle ne changeant pas, je ne le détaillerais pas ici. Veuillez vous référer au précédent tutoriel pour voir le code correspondant.
+
+####Le contrôleur.
+
+Dans cet exemple, le code du contrôleur est beaucoup plus simple car nous n'avons pas à nous occuper de la gestion des requêtes de type REST comme nous l'avons faits dans le précédent tutoriel. Nous n'avons pas de redirection à faire car nous ne recevons pas de requêtes autres que celle reçue à la connexion d'un utilisateur et qui affiche toujours la page contenant le formulaire.
+
+```javascript
+module Controller {
+
+    dispatcher = parser {
+    	    | "/" -> View.simple_main_page()
+    	    | (.*) -> Resource.page("Hello", <><h2>"404 NOT FOUND!"</h2></>)
+    }
+
+}
+
+Server.start(Server.http, {custom : Controller.dispatcher})
+```
+
+####La vue.
+
+Nous allons voir comment construire une interface utilisateur via laquelle on va pouvoir donner au serveur les informations nécessaires afin de produire un nouveau *snippet*. Nous modifions donc le fichier ```src/view.opa``` comme suit :
+
+```javascript
+module View {
+
+    function initialize() {
+	snippet_one = Model.make_snippet("essai 1","//FOO","gregmak");
+	snippet_two = Model.make_snippet("essai 2","//Hello World","gregmak");
+	snippet_three = Model.make_snippet("essai 3","//Me again !","gregmak");
+
+	function foo(snippet) {
+	    display_snippet(snippet);
+	};
+
+	Model.save_snippet(snippet_one, foo);
+	Model.save_snippet(snippet_two, foo);
+	Model.save_snippet(snippet_three, foo);
+
+    }
+
+    function display_snippet(snippet) {
+	content =
+	    <>
+            <h2>{snippet.title} by {snippet.user}</h2><br>
+	    <div>{Xhtml.of_string_unsafe(snippet.code)}</div>
+	    </>;
+	Dom.transform([{jq : #snippet-list, subject : {content : content}, verb : {prepend}}])
+    }
+
+    function addSnippet(_) {
+	title = Dom.get_value(#title);
+	code = Dom.get_value(#code)
+	    |> Markdown.xhtml_of_string({detect_text_links: true}, _)
+	    |> Xhtml.to_string(_);
+	user = Dom.get_value(#user);
+	if (title == "" || code == "" || user == "") {
+	    message = {alert : {title : "Erreur", description : <> Tous les champs ne sont pas renseignés. </>}, closable : true};
+	    alert = WBootstrap.Alert.make(message, {error});
+	    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+	} else {
+	    snippet = Model.make_snippet(title, code, user);
+	    Model.save_snippet(snippet, function(snippet) {
+		Dom.clear_value(#title);
+		Dom.clear_value(#code);
+		Dom.clear_value(#user);
+		display_snippet(snippet);
+	    });
+	}
+    }
+
+    function simple_main_page() {
+	title_bar =
+	    <>
+	    <div class="navbar navbar-fixed-top">
+	    <div class="navbar-inner">
+            <div class="container">
+            <a class="brand" href="#">
+	    <>OPA</>
+	    </a>
+            </div>
+	    </div>
+	    </div>
+	    </>;
+	form =
+	    <>
+	    <div id="snippet-form" style="margin-top:50px;">
+            <h2>Go ...</h2>
+	    <form method="post" action="javascript:void(0);" class="well">
+            <label>Title : </label>
+            <input id="title" type="text" class="span3" placeholder="title"/>
+            <label>Code Snippet : (with markdown) </label>
+            <textarea id="code" placeholder="code" style="width:100%" rows="5"></textarea>
+            <label>User : </label>
+            <input id="user" type="text" placeholder="user"/>
+            <button type="submit" class="btn" onclick={addSnippet(_)}>Ajouter un Snippet</button>
+	    </form>
+	    </div>
+	    </>;
+	content =
+	    <div onready={function(_) {initialize()}}>
+	    {title_bar}
+	    <div class="container">
+	    <div>{form}</div>
+	    <ul id="snippet-list" style="list-style: none;">
+	    <li data-template>
+            <hr>
+	    </li>
+	    </ul>
+	    </div>
+	    <div id="notifications">
+	    </div>
+	    </div>;
+	Resource.page("StyKKeKode in OPA", content)
+    }
+
+}
+
+```
+
+La première chose à regarder est la construction de la page proprement dite, faite par la fonction **simple_main_page()**. La structure de cette page n'est pas bien compliquée et se résume à une barre de titre, un formulaire de saisie et enfin une div pour afficher en bas de la page la liste des *snippets* stockées. Nous y avons inclus une div ayant l'id *notifications* pour afficher des notifications à l'utilisateur (notamment lorsqu'il essaye d'ajouter un *snippet* incomplet, mais nous verrons cela plus en détails).
+
+Nous voyons que le formulaire contient un bouton qui appel la fonction **add_snippet** lorsque l'utilisateur clique dessus. Regardons le code de cette fonction :
+
+```javascript
+    function addSnippet(_) {
+	title = Dom.get_value(#title);
+	code = Dom.get_value(#code)
+	    |> Markdown.xhtml_of_string({detect_text_links: true}, _)
+	    |> Xhtml.to_string(_);
+	user = Dom.get_value(#user);
+	if (title == "" || code == "" || user == "") {
+	    message = {alert : {title : "Erreur", description : <> Tous les champs ne sont pas renseignés. </>}, closable : true};
+	    alert = WBootstrap.Alert.make(message, {error});
+	    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+	} else {
+	    snippet = Model.make_snippet(title, code, user);
+	    Model.save_snippet(snippet, function(snippet) {
+		Dom.clear_value(#title);
+		Dom.clear_value(#code);
+		Dom.clear_value(#user);
+		display_snippet(snippet);
+	    });
+	}
+    }
+```
+
+Notez que l'on a introduit ici un premier niveau de gestion d'erreurs : si l'un des champs du formulaire n'est pas renseigné, on notifie l'utilisateur que le serveur n'a pas assez de données et aucun *snippet* n'est construit. Sinon, les données sont envoyées au serveur qui va pouvoir créer un nouveau *snippet*.
+
+#####Distribution client-serveur.
+
+Posons nous un moment la question de la distribution des fonctions.
+
+Comme vous l'avez remarqué, nous n'avons à aucun moment indiqué de quel côté devaient se trouver les fonctions que nous avons écrit. Le compilateur **Opa** fait une passe de *slicing* : une analyse de code pour déterminer de manière automatique de quel côté placer ces fonctions.
+Mais nous pouvons forcer cette distribution (au moins pour certaines classes de fonctions; les fonctions touchant à la base de données ne peuvent par exemple pas se trouver côté client mais seulement côté serveur) à l'aide des deux *directives* suivantes :
+* server : force le code à se trouver côté serveur
+* client : force le code à se trouver côté client.
+
+Voyons cela à travers un exemple.
+
+Reprenons la fonction **add_snippet** que nous venons de voir. Nous modifions le code pour pouvoir afficher un message d'erreur à chaque tentative de création d'un nouveau *snippet* incomplet. L'affichage d'un message se fait grâce à la fonction **jlog(message)**. Et enfin, nous *taggons* notre fonction, d'abord avec la directive **server**, puis avec la directive **client**, et regardons le resultat produit.
+
+Le code modifié est le suivant :
+
+```javascript
+    function addSnippet(_) {
+	title = Dom.get_value(#title);
+	code = Dom.get_value(#code)
+	    |> Markdown.xhtml_of_string({detect_text_links: true}, _)
+	    |> Xhtml.to_string(_);
+	user = Dom.get_value(#user);
+	if (title == "" || code == "" || user == "") {
+            jlog("ERREUR : création impossible"); // nouvelle ligne rajoutée
+	    message = {alert : {title : "Erreur", description : <> Tous les champs ne sont pas renseignés. </>}, closable : true};
+	    alert = WBootstrap.Alert.make(message, {error});
+	    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+	} else {
+	    snippet = Model.make_snippet(title, code, user);
+	    Model.save_snippet(snippet, function(snippet) {
+		Dom.clear_value(#title);
+		Dom.clear_value(#code);
+		Dom.clear_value(#user);
+		display_snippet(snippet);
+	    });
+	}
+    }
+```
+
+######Avec la directive **client**.
+
+Commençons par forcer l'exécution de notre fonction côté client. Nous ajoutons donc la directive **client** avant la déclaration de la fonction.
+
+Recompilez et relancez l'application. Cliquez ensuite sur le bouton 'Ajouter un snippet'.
+
+![snippets_v2_error_client.png](https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_error_client.png?raw=true)
+
+Notez dans le coin haut-droit du navigateur une petite fenêtre contenant les messages affichés en vert sur fond blanc. Nous voyons les messages sur le navigateur, ce qui nous assure que la fonction a bien été exécutée côté **client**.
+
+######Avec la directive **server**.
+
+Nous forçons maintenant l'exécution de notre fonction côté serveur. Nous ajoutons alors la directive **server** avant la déclaration de la fonction à la place de la directive **client** que nous venons d'ajouter.
+
+Recompilez et relancez l'application. Cliquez ensuite sur le bouton 'Ajouter un snippet'.
+
+![snippets_v2_error_server.png](https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_error_server.png?raw=true)
+
+Notez cette fois l'absence de fenêtre de messages dans le navigateur. Regardez maintenant ce qui est affiché dans la console dans laquelle vous avez lancé l'application. Vous devriez avoir un affichage comme cela :
+
+![snippets_v2_error_console.png](https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_error_console.png?raw=true)
+
+######Sans directive.
+
+Pour savoir maintenant le côté choisi automatiquement lors de la phase de *slicing*, il vous suffit de supprimer la directive (client ou server) que nous venons de rajouter, de recompiler et de relancer l'application.
+
+En cliquant sur le bouton 'Ajouter un snippet', nous voyons que les messages d'erreur sont affichés sur le navigateur. Cela nous indique que le compilateur a choisi le côté client par défaut pour cette fonction.
+
+
+#####Style CSS.
+
+Comme nous venons de construire une page web, il serait intéressant de voir comment nous pouvons gérer le style CSS de cette page.
+
+Regardons d'abord le rendu actuel de la page.
+
+![snippets_v2_style.png](https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_style.png?raw=true)
+
+Le rendu est sobre mais agréable, les éléments sont centrés horizontalement, le formulaire de saisie dispose d'un fond plus foncé, etc. Et ce, alors que nous n'avons indiqué aucun style particulier dans notre code de construction de cette page, ni ajouté de fichier de définition de style CSS.
+
+Alors, comment cela est-ce fait ? Simplement grâce à une simple inclusion.
+
+Regardons le fichier ```opa.conf``` que nous avons vu lors du précédent tutoriel :
+
+```javascript
+snippets.controller:
+	import snippets.view
+	import snippets.model
+	src/controller.opa
+
+snippets.view:
+	import snippets.model
+	import stdlib.themes.bootstrap  // la ligne qui nous intéresse
+ 	import stdlib.widgets.bootstrap
+	import stdlib.tools.markdown
+	src/view.opa
+
+snippets.model:
+	src/model.opa
+```
+
+Notez la présence de la ligne suivante : ```import stdlib.themes.bootstrap```
+
+Cela suffit à indiquer que l'on souhaite utiliser le style CSS définit par ce thème présent dans la librairie standard d'**Opa**.
+
+Supprimons cette ligne et regardons le rendu brut de cette page sans style particulier.
+
+![snippets_v2_no_style.png](https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_no_style.png?raw=true)
+
+Nous voyons que le rendu sans style n'est pas terrible. Toutes les fonctionnalités sont bien présentes mais la page n'est pas jolie.
+
+Vous pouvez bien sûr définir votre propres styles CSS, en utilisant le fichier ```resources/css/style.css```.
