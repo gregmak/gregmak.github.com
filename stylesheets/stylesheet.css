@@ -206,6 +206,7 @@ ul, ol, dl {
 ul li {
   list-style: inside;
   padding-left: 20px;
+  list-style-type: none;
 }
 
 ol li {
@@ -260,6 +261,11 @@ form {
 img {
   width: 100%;
   max-width: 100%;
+}
+
+.tutorials {
+  position: absolute;
+  top: 220px;
 }
 
 /*******************************************************************************
