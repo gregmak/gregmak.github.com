@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset='utf-8' />
+<meta http-equiv="X-UA-Compatible" content="chrome=1" />
+<meta name="description" content="Gregmak.github.com : Persistance avec MongoDB" />
+<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+<title>Gregmak.github.com</title>
+</head>
+
+<body>
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+  <header class="inner">
+  <a id="forkme_banner" href="https://github.com/gregmak">View on GitHub</a>
+  <h1 id="project_title">Gregmak.github.com</h1>
+  <h2 id="project_tagline">Persistance avec MongoDB</h2>
+  </header>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main_content_wrap" class="outer">
+  <section id="main_content" class="inner">
+  <h2>Persistance avec MongoDB.</h2>
+
+<p>Nous allons voir dans ce tutoriel comment gérer la persistance en <strong>Opa</strong> via l'utilisation d'une base de données NoSQL : <strong>MongoDB</strong>.
+Pour ce faire nous allons reprendre l'application ecrite précédamment et nous allons la modifier pour que les <em>snippets</em> créés soient stockés dans une base de données plutôt qu'en RAM.</p>
+
+<h4>Le modèle.</h4>
+
+<p>Cette fois le code du modèle va changer par rapport à la première version de l'application.
+Nous y déclarons maintenant notre base de données, ainsi que toutes les fonctions de manipulation de <em>snippets</em>.</p>
+
+<div class="highlight"><pre><span class="nx">type</span> <span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span> <span class="o">=</span> <span class="p">{</span><span class="nx">option</span><span class="p">(</span><span class="kr">int</span><span class="p">)</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">title</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">user</span><span class="p">}</span>
+
+<span class="nx">database</span> <span class="nx">test</span> <span class="p">{</span>
+    <span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span> <span class="o">/</span><span class="nx">snippets</span><span class="p">[{</span><span class="nx">id</span><span class="p">}]</span> <span class="c1">// the set of snippets</span>
+<span class="p">}</span>
+
+<span class="nx">module</span> <span class="nx">Model</span> <span class="p">{</span>
+
+    <span class="kd">function</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="nx">title</span><span class="p">,</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">{</span><span class="nx">id</span><span class="o">:</span> <span class="p">{</span><span class="nx">none</span><span class="p">},</span> <span class="o">~</span><span class="nx">title</span><span class="p">,</span> <span class="o">~</span><span class="nx">code</span><span class="p">,</span> <span class="o">~</span><span class="nx">user</span><span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">match</span> <span class="p">(</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">_</span><span class="p">}</span><span class="o">:</span>
+        <span class="err">/test/snippets[{id : snippet.id}] &lt;- snippet;</span>
+        <span class="c1">// applying the callback onto the given snippet</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="k">default</span><span class="o">:</span> <span class="c1">// new snippet</span>
+        <span class="nx">size</span> <span class="o">=</span> <span class="nx">Iter</span><span class="p">.</span><span class="nx">count</span><span class="p">(</span><span class="nx">DbSet</span><span class="p">.</span><span class="nx">iterator</span><span class="p">(</span><span class="err">/test/snippets));</span>
+        <span class="nx">id</span> <span class="o">=</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">};</span>
+        <span class="nx">snippet</span> <span class="o">=</span> <span class="p">{</span><span class="nx">snippet</span> <span class="kd">with</span> <span class="o">~</span><span class="nx">id</span><span class="p">};</span>
+        <span class="err">/test/snippets[{id: id}] &lt;- snippet;</span>
+        <span class="c1">// applying the callback onto the updated snippet</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">find_all</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">it</span> <span class="o">=</span> <span class="nx">DbSet</span><span class="p">.</span><span class="nx">iterator</span><span class="p">(</span><span class="err">/test/snippets);</span>
+    <span class="nx">snippets</span> <span class="o">=</span> <span class="nx">Iter</span><span class="p">.</span><span class="nx">to_list</span><span class="p">(</span><span class="nx">it</span><span class="p">);</span>
+    <span class="nx">callback</span><span class="p">(</span><span class="nx">snippets</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">find_by_id</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+        <span class="err">/test/snippets[{id: {some: id}}];</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">delete_snippet</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">find_by_id</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+    <span class="nx">Db</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="err">@</span><span class="o">/</span><span class="nx">test</span><span class="o">/</span><span class="nx">snippets</span><span class="p">[{</span><span class="nx">id</span><span class="o">:</span> <span class="nx">snippet</span><span class="p">.</span><span class="nx">id</span><span class="p">}]);</span>
+    <span class="c1">// applying the callback onto the found snippet</span>
+    <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">initialize</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">function</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">append</span><span class="p">});</span>
+    <span class="p">}</span>
+    <span class="nx">find_all</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">List</span><span class="p">.</span><span class="nx">is_empty</span><span class="p">(</span><span class="nx">snippets</span><span class="p">))</span> <span class="p">{</span>
+        <span class="nx">snippet_one</span> <span class="o">=</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 1"</span><span class="p">,</span><span class="s2">"//FOO"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+        <span class="nx">snippet_two</span> <span class="o">=</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 2"</span><span class="p">,</span><span class="s2">"//Hello World"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+        <span class="nx">snippet_three</span> <span class="o">=</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 3"</span><span class="p">,</span><span class="s2">"//Me again !"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+        <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_one</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+        <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_two</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+        <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_three</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">List</span><span class="p">.</span><span class="nx">iter</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+        <span class="p">},</span> <span class="nx">snippets</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+
+</pre></div>
+
+<p>Ce code commence avec la déclaration du type d'un <em>snippet</em>. Nous voyons qu'ici un <em>snippet</em> est composé d'un identifiant, d'un titre, d'un code et d'un nom pour le créateur.</p>
+
+<div class="highlight"><pre><span class="nx">type</span> <span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span> <span class="o">=</span> <span class="p">{</span><span class="nx">option</span><span class="p">(</span><span class="kr">int</span><span class="p">)</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">title</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">user</span><span class="p">}</span>
+</pre></div>
+
+<p>Tous ces champs sauf l'identifiant sont des chaînes de caractères. L'identifiant est un entier optionel (c'est-à-dire qu'il peut ne pas être précisé).</p>
+
+<p>Uns fois le(s) type(s) de données définis, nous devons déclarer la structure de notre base de données.</p>
+
+<div class="highlight"><pre><span class="nx">database</span> <span class="nx">test</span> <span class="p">{</span>
+    <span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span> <span class="o">/</span><span class="nx">snippets</span><span class="p">[{</span><span class="nx">id</span><span class="p">}]</span> <span class="c1">// the set of snippets</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Nous venons de déclarer une base de données ayant pour nom <em>test</em> et ayant un seul chemin : <em>/snippets[{id}]</em> servant à stocker des données du type <em>Snippet.t</em>.
+Ici nous n'avons que des <em>snippets</em> à stocker, notre base peut dont se composer d'un chemin unique.
+Cette déclaration indique que l'on veut stocker un <em>set</em> de <em>snippets</em> avec le champ <em>id</em> comme clé primaire.
+Ces <em>snippets</em> seront donc récupérés dans la base de donneés par leur identifiant.</p>
+
+<p>Regardons plus en détail les fonctions de manipulation des <em>snippets</em>.</p>
+
+<h5>La recherche de <em>snippets</em>.</h5>
+
+<p>Nous définissons ici une méthode pour récupérer tous les <em>snippets</em> contenus dans la base et une méthode pour récupérer un <em>snippet</em> à partir de son identifiant.</p>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">find_all</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">it</span> <span class="o">=</span> <span class="nx">DbSet</span><span class="p">.</span><span class="nx">iterator</span><span class="p">(</span><span class="err">/test/snippets);</span>
+    <span class="nx">snippets</span> <span class="o">=</span> <span class="nx">Iter</span><span class="p">.</span><span class="nx">to_list</span><span class="p">(</span><span class="nx">it</span><span class="p">);</span>
+    <span class="nx">callback</span><span class="p">(</span><span class="nx">snippets</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">find_by_id</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+        <span class="err">/test/snippets[{id: {some: id}}];</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>Ces deux fonctions prennent en argument une continuation à appliquer unefois le ou les <em>snippet(s)</em> récupéré(s).</p>
+
+<p>La méthode pour récupérer tous les <em>snippets</em> va lire l'ensmble des <em>snippets</em> sur le chemin <em>/test/snippets</em> sous la forme d'un <em>DbSet</em>.
+Nous voulons manipuler ces <em>sniipets</em> sous forme de liste donc nous transformons notre <em>DbSet</em> en liste de <em>snippets</em> en passant par un <em>iterator</em>.</p>
+
+<p>La méthode pour récupérer un <em>snippet</em> particulier prend en plus l'identifiant du <em>snippet</em> rechercher.
+Cette méthode va chercher dans l'ensemble des <em>snippets</em> et applique la continuation sur le <em>snippet</em> ayant l'identifiant recherché.</p>
+
+<h6>Attention !!!</h6>
+
+<p>Chaque chemin d'une déclaration de base de données est associée à une valeur par défaut.
+Si aucune donnée n'est sotckée au chemin indiqué, la valeur par défaut associée à ce chemin sera retournée.
+C'est pourquoi une lecture sur un chemin valide de la base de donneés retourne toujours un résultat.
+C'est au programeur de faire attention, en manipulant le résultat retourner, à savoir s'il manipule cette valeur par défaut ou une valeur trouvée dans la base de données.
+Nous reverrons ce point plus loin dans la partie sur la gestion de la vue.</p>
+
+<h5>La sauvegarde de <em>snippets</em>.</h5>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">match</span> <span class="p">(</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">_</span><span class="p">}</span><span class="o">:</span>
+        <span class="err">/test/snippets[{id : snippet.id}] &lt;- snippet;</span>
+        <span class="c1">// applying the callback onto the given snippet</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="k">default</span><span class="o">:</span> <span class="c1">// new snippet</span>
+        <span class="nx">size</span> <span class="o">=</span> <span class="nx">Iter</span><span class="p">.</span><span class="nx">count</span><span class="p">(</span><span class="nx">DbSet</span><span class="p">.</span><span class="nx">iterator</span><span class="p">(</span><span class="err">/test/snippets));</span>
+        <span class="nx">id</span> <span class="o">=</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">};</span>
+        <span class="nx">snippet</span> <span class="o">=</span> <span class="p">{</span><span class="nx">snippet</span> <span class="kd">with</span> <span class="o">~</span><span class="nx">id</span><span class="p">};</span>
+        <span class="err">/test/snippets[{id: id}] &lt;- snippet;</span>
+        <span class="c1">// applying the callback onto the updated snippet</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>Comme nous l'avons indiqué précédamment, les <em>snippets</em> seront enregistrés dans la base de données avec leur identifiant comme clé primaire.
+L'identifiant d'un <em>snippet</em> est un entier optionel (c'est-à-dire qu'il peut ne pas être rensigné comme c'est le cas à la création d'un nouveau <em>snippet</em>).
+Nous devons donc traiter les deux cas lors de l'enregistrement d'un <em>snippet</em> :</p>
+
+<ol>
+  <li>Le cas où l'identifiant est rensigné (donc enregistrement d'un <em>snippet</em> existant).</li>
+  <li>Le cas où il n'est pas rensigné (donc enregistrement d'un nouveau <em>snippet</em>).</li>
+</ol><p>Nous effectuons donc un <em>pattern-matching</em> sur l'identifiant du <em>snippet</em> à sauvegarder.</p>
+
+<p>Dans le cas où l'identifiant est renseigné, nous avons juste à écraser l'ancien <em>snippet</em> par le nouveau.</p>
+
+<p>Dans le cas où l'identifiant n'est pas connu, nous devons en créér un nouveau et l'assigner au <em>snippet</em> à sauvegarder.
+Pour ce faire nous avons besoin de connaitre le nombre de <em>snippets</em> actuellement contenu dans la base de données. Nous passons encore une fois par un <em>iterator</em>.</p>
+
+<div class="highlight"><pre>        <span class="nx">size</span> <span class="o">=</span> <span class="nx">Iter</span><span class="p">.</span><span class="nx">count</span><span class="p">(</span><span class="nx">DbSet</span><span class="p">.</span><span class="nx">iterator</span><span class="p">(</span><span class="err">/test/snippets));</span>
+</pre></div>
+
+<p>Une fois le nombre de <em>snippets</em> connus, nous pouvons créér notre nouvel identifiant en prennant l'entier suivant ce nombre et ainsi nous assurer que chaque <em>snippet</em> contenu dans la base aura bien un identifiant unique.</p>
+
+<div class="highlight"><pre>        <span class="nx">id</span> <span class="o">=</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">};</span>
+</pre></div>
+
+<p>Il ne nous reste plus qu'a assigner ce nouvel identifiant à notre nouveau <em>snippet</em> et l'enregistrer dans la base avec cet identifiant comme clé primaire, puis appliquer la continuation.</p>
+
+<div class="highlight"><pre>    <span class="nx">snippet</span> <span class="o">=</span> <span class="p">{</span><span class="nx">snippet</span> <span class="kd">with</span> <span class="o">~</span><span class="nx">id</span><span class="p">};</span>
+    <span class="err">/test/snippets[{id: id}] &lt;- snippet;</span>
+    <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+</pre></div>
+
+<h5>La suppression de <em>snippets</em>.</h5>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">delete_snippet</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">Db</span><span class="p">.</span><span class="nx">exists</span><span class="p">(</span><span class="err">@</span><span class="o">/</span><span class="nx">test</span><span class="o">/</span><span class="nx">snippets</span><span class="p">[{</span><span class="nx">id</span><span class="o">:</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">id</span><span class="p">}}]))</span> <span class="p">{</span>
+        <span class="nx">Db</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="err">@</span><span class="o">/</span><span class="nx">test</span><span class="o">/</span><span class="nx">snippets</span><span class="p">[{</span><span class="nx">id</span><span class="o">:</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">id</span><span class="p">}}]);</span>
+        <span class="nx">callback</span><span class="p">({</span><span class="nx">ok</span><span class="p">});</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">callback</span><span class="p">({</span><span class="nx">ko</span><span class="p">});</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>La suppression d'un <em>snippet</em> n'est pas très compliquée.
+Nous testons l'existence du <em>snippet</em> ayant l'identifiant donné. S'il existe, nous le supprimons et indiquons que la suppression a été faite (<code>callback({ok})</code>). Sinon, nous indiquons que la suppression ne s'est pas faire (<code>callback({ko})</code>).</p>
+
+<h5>L'initialisation.</h5>
+
+<p>Au démarrage de notre serveur, nous regardons le contenu de notre base de données par un appel à la fonction <em>find_all()</em>.
+Si la liste retournée est vide, nous créons trois <em>snippets</em> pour remplir la base et nous les affichons.
+Dans le cas contraire, la base est déjà remplie de quelques <em>snippets</em> que nous affichons.</p>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">initialize</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">function</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">append</span><span class="p">});</span>
+    <span class="p">}</span>
+    <span class="nx">find_all</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">List</span><span class="p">.</span><span class="nx">is_empty</span><span class="p">(</span><span class="nx">snippets</span><span class="p">))</span> <span class="p">{</span>
+        <span class="nx">snippet_one</span> <span class="o">=</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 1"</span><span class="p">,</span><span class="s2">"//FOO"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+        <span class="nx">snippet_two</span> <span class="o">=</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 2"</span><span class="p">,</span><span class="s2">"//Hello World"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+        <span class="nx">snippet_three</span> <span class="o">=</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 3"</span><span class="p">,</span><span class="s2">"//Me again !"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+        <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_one</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+        <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_two</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+        <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_three</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">List</span><span class="p">.</span><span class="nx">iter</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+        <span class="p">},</span> <span class="nx">snippets</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+</pre></div>
+
+<h4>La vue.</h4>
+
+<div class="highlight"><pre><span class="nx">module</span> <span class="nx">View</span> <span class="p">{</span>
+
+    <span class="kd">function</span> <span class="nx">initialize</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">initialize</span><span class="p">(</span><span class="nx">display_snippet</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="nx">verb</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">content</span> <span class="o">=</span>
+        <span class="o">&lt;</span><span class="nx">li</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">title</span><span class="p">}</span> <span class="nx">by</span> <span class="p">{</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">user</span><span class="p">}</span><span class="o">&lt;</span><span class="err">/h2&gt;&lt;br&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">Xhtml</span><span class="p">.</span><span class="nx">of_string_unsafe</span><span class="p">(</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">code</span><span class="p">)}</span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/li&gt;;</span>
+    <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">snippet</span><span class="o">-</span><span class="nx">list</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">content</span><span class="p">},</span> <span class="o">~</span><span class="nx">verb</span><span class="p">}])</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">add_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">title</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">title</span><span class="p">);</span>
+    <span class="nx">code</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">code</span><span class="p">)</span>
+        <span class="o">|&gt;</span> <span class="nx">Markdown</span><span class="p">.</span><span class="nx">xhtml_of_string</span><span class="p">({</span><span class="nx">detect_text_links</span><span class="o">:</span> <span class="kc">true</span><span class="p">},</span> <span class="nx">_</span><span class="p">)</span>
+        <span class="o">|&gt;</span> <span class="nx">Xhtml</span><span class="p">.</span><span class="nx">to_string</span><span class="p">(</span><span class="nx">_</span><span class="p">);</span>
+    <span class="nx">user</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">user</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">title</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">code</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">user</span> <span class="o">==</span> <span class="s2">""</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Erreur"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">All</span> <span class="nx">fields</span> <span class="nx">are</span> <span class="nx">mandatory</span><span class="p">.</span> <span class="nx">Please</span> <span class="nx">fill</span> <span class="nx">them</span> <span class="nx">all</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">error</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="nx">title</span><span class="p">,</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">user</span><span class="p">);</span>
+        <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">title</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">code</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">append</span><span class="p">});</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">show_all</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">find_all</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">List</span><span class="p">.</span><span class="nx">iteri</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">set</span><span class="p">});</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">append</span><span class="p">});</span>
+        <span class="p">}</span>
+        <span class="p">},</span> <span class="nx">snippets</span><span class="p">)</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">show_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">id</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_show</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="nx">Int</span><span class="p">.</span><span class="nx">of_string</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span>
+    <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">find_by_id</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">title</span> <span class="o">==</span> <span class="s2">""</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">Snippet</span> <span class="nx">of</span> <span class="nx">id</span> <span class="p">{</span><span class="nx">id</span><span class="p">}</span> <span class="nx">does</span> <span class="nx">not</span> <span class="nx">exist</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">success</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_show</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">set</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_show</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">delete_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">id</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_delete</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="nx">Int</span><span class="p">.</span><span class="nx">of_string</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">delete_snippet</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">match</span> <span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">ok</span><span class="p">}</span> <span class="o">:</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"OK"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">Snippet</span> <span class="nx">of</span> <span class="nx">id</span> <span class="p">{</span><span class="nx">id</span><span class="p">}</span> <span class="nx">has</span> <span class="nx">been</span> <span class="nx">removed</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">success</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_delete</span><span class="p">);</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">ko</span><span class="p">}</span> <span class="o">:</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">Snippet</span> <span class="nx">of</span> <span class="nx">id</span> <span class="p">{</span><span class="nx">id</span><span class="p">}</span> <span class="nx">does</span> <span class="nx">not</span> <span class="nx">exist</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">success</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_delete</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">simple_main_page</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">title_bar</span> <span class="o">=</span>
+        <span class="o">&lt;&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"navbar navbar-fixed-top"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"navbar-inner"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"container"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">a</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"brand"</span> <span class="nx">href</span><span class="o">=</span><span class="s2">"#"</span><span class="o">&gt;</span>
+        <span class="o">&lt;&gt;</span><span class="nx">OPA</span><span class="o">&lt;</span><span class="err">/&gt;</span>
+        <span class="o">&lt;</span><span class="err">/a&gt;</span>
+            <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/&gt;;</span>
+    <span class="nx">form</span> <span class="o">=</span>
+        <span class="o">&lt;&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"snippet-form"</span> <span class="nx">style</span><span class="o">=</span><span class="s2">"margin-top:50px;"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="nx">Go</span> <span class="p">...</span><span class="o">&lt;</span><span class="err">/h2&gt;</span>
+        <span class="o">&lt;</span><span class="nx">form</span> <span class="nx">method</span><span class="o">=</span><span class="s2">"post"</span> <span class="nx">action</span><span class="o">=</span><span class="s2">"javascript:void(0);"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"well"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">label</span><span class="o">&gt;</span><span class="nx">Title</span> <span class="o">:</span> <span class="o">&lt;</span><span class="err">/label&gt;</span>
+            <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"title"</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"span3"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"title"</span><span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">label</span><span class="o">&gt;</span><span class="nx">Code</span> <span class="nx">Snippet</span> <span class="o">:</span> <span class="p">(</span><span class="kd">with</span> <span class="nx">markdown</span><span class="p">)</span> <span class="o">&lt;</span><span class="err">/label&gt;</span>
+            <span class="o">&lt;</span><span class="nx">textarea</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"code"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"code"</span> <span class="nx">rows</span><span class="o">=</span><span class="s2">"5"</span><span class="o">&gt;&lt;</span><span class="err">/textarea&gt;</span>
+            <span class="o">&lt;</span><span class="nx">label</span><span class="o">&gt;</span><span class="nx">User</span> <span class="o">:</span> <span class="o">&lt;</span><span class="err">/label&gt;</span>
+            <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"user"</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"user"</span><span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"submit"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"btn"</span> <span class="nx">onclick</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">add_snippet</span><span class="p">()}}</span><span class="o">&gt;</span><span class="nx">Add</span> <span class="nx">a</span> <span class="nx">Snippet</span><span class="o">&lt;</span><span class="err">/button&gt;</span>
+        <span class="o">&lt;</span><span class="err">/form&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/&gt;;</span>
+    <span class="nx">boutons</span> <span class="o">=</span>
+        <span class="o">&lt;&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"submit"</span>  <span class="kr">class</span><span class="o">=</span><span class="s2">"btn"</span> <span class="nx">onclick</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">show_all</span><span class="p">()}}</span><span class="o">&gt;</span><span class="nx">Show</span> <span class="nx">all</span> <span class="nx">snippets</span><span class="o">&lt;</span><span class="err">/button&gt;&lt;/div&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"submit"</span>  <span class="kr">class</span><span class="o">=</span><span class="s2">"btn"</span> <span class="nx">onclick</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">show_snippet</span><span class="p">()}}</span><span class="o">&gt;</span><span class="nx">Show</span> <span class="nx">snippet</span> <span class="nx">of</span> <span class="nx">id</span><span class="o">&lt;</span><span class="err">/button&gt;</span>
+        <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"snippet_id_show"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"snippet-id"</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"id"</span><span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"submit"</span>  <span class="kr">class</span><span class="o">=</span><span class="s2">"btn"</span> <span class="nx">onclick</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">delete_snippet</span><span class="p">()}}</span><span class="o">&gt;</span><span class="nx">Delete</span> <span class="nx">snippet</span> <span class="nx">of</span> <span class="nx">id</span><span class="o">&lt;</span><span class="err">/button&gt;</span>
+        <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"snippet_id_delete"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"snippet-id"</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"id"</span><span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/&gt;;</span>
+    <span class="nx">content</span> <span class="o">=</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">onready</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">initialize</span><span class="p">()}}</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">title_bar</span><span class="p">}</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"container"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">form</span><span class="p">}</span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">boutons</span><span class="p">}</span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="nx">ul</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"snippet-list"</span> <span class="nx">style</span><span class="o">=</span><span class="s2">"list-style: none;"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">li</span> <span class="nx">data</span><span class="o">-</span><span class="nx">template</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">hr</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="err">/li&gt;</span>
+        <span class="o">&lt;</span><span class="err">/ul&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"notifications"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;;</span>
+    <span class="nx">Resource</span><span class="p">.</span><span class="nx">page</span><span class="p">(</span><span class="s2">"StyKKeKode in OPA"</span><span class="p">,</span> <span class="nx">content</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+
+<p>La vue ne change pas énormément comparé à la version précédente sur la manipulation du DOM en <em>Opa</em>.
+Elle comporte quelques fonctions suplémentaires que vous allons détailler maintenant.</p>
+
+<h5>Affichage de tous les <em>snippets</em>.</h5>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">show_all</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">find_all</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">List</span><span class="p">.</span><span class="nx">iteri</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">set</span><span class="p">});</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">append</span><span class="p">});</span>
+        <span class="p">}</span>
+        <span class="p">},</span> <span class="nx">snippets</span><span class="p">)</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>Nous récupérons la liste de tous les <em>snippets</em> contenus dans la base par un appel à la fonction <em>find_all()</em> et pour chaque <em>snippet</em> contenu dans la liste nous appelons la fonction d'affichage <em>display_snippet()</em>.
+Pour le 1er <em>snippet</em> à afficher nous passons la valeur {set} à la fonction <em>display_snippet()</em> pour lui indiquer que cet affichage doit écraser l'affichage précédent.
+Par la suite nous utilisont la valeur {append} pour indiquer que les affichages suivants viendront s'ajouter au premier.</p>
+
+<h5>Affichage d'un <em>snippet</em>.</h5>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">show_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">id</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_show</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="nx">Int</span><span class="p">.</span><span class="nx">of_string</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span>
+    <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">find_by_id</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">title</span> <span class="o">==</span> <span class="s2">""</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">Snippet</span> <span class="nx">of</span> <span class="nx">id</span> <span class="p">{</span><span class="nx">id</span><span class="p">}</span> <span class="nx">does</span> <span class="nx">not</span> <span class="nx">exist</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">success</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_show</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">set</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_show</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>Pour afficher un <em>snippet</em> particulier, nous avons besoin de lire son identifiant renseigné par l'utilisateur dans le champ <em>snippet_id_show</em> (veuillez vous reporter au tutoriel sur la manipulation du DOM en <em>Opa</em> pour plus de détails sur ce sujet).
+Une fois cet identifiant récupéré, nous appelons la fonction <em>find_by_id()</em> du modèle et nous appliquons un traitement particulier en fonction de la valeur retournée.</p>
+
+<p>Nous avons précisé précédamment qu'une lecture sur un chemin de la base de données retournait toujours un résultat. Si aucune donnée ne se trouve sur un chemin donné, la valeur par défaut associée à ce chemin est retournée.
+Nous devons donc regarder le conteunu de la valeur retournée pour nous assurer que ce n'est pas la valeur par défaut, mais bien un <em>snippet</em> trouvé sur le chemin donné.
+Nous faisons le test ici uniquement sur le titre du <em>snippet</em> retourné pour nous assurer qu'il n'est pas vide, ce qui serait le cas pour la valeur par défaut.
+Si le titre du <em>snippet</em> n'est pas vide, nous appelons la fonction d'affichage <em>display_snippet()</em> avec en paramètres le <em>snippet</em> retourné et la valeur {set} pour écraser l'affichage précédent :</p>
+
+<div class="highlight"><pre>        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="p">{</span><span class="nx">set</span><span class="p">});</span>
+</pre></div>
+
+<p>Si le titre du <em>snippet</em> est vide, nous affichons un message d'erreur pour indiquer à l'utilisateur que le <em>snippet</em> recherché n'a pas été trouvé.</p>
+
+<div class="highlight"><pre>        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">Snippet</span> <span class="nx">of</span> <span class="nx">id</span> <span class="p">{</span><span class="nx">id</span><span class="p">}</span> <span class="nx">does</span> <span class="nx">not</span> <span class="nx">exist</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">success</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+</pre></div>
+
+<p>Dans tous les cas, nous nettoyns le formulaire de la valeur lue dans le champ <em>snippet_id_show</em> :</p>
+
+<div class="highlight"><pre>        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_show</span><span class="p">);</span>
+</pre></div>
+
+<h5>Suppression d'un <em>snippet</em>.</h5>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">delete_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">id</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_delete</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="nx">Int</span><span class="p">.</span><span class="nx">of_string</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">delete_snippet</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">match</span> <span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">ok</span><span class="p">}</span> <span class="o">:</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"OK"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">Snippet</span> <span class="nx">of</span> <span class="nx">id</span> <span class="p">{</span><span class="nx">id</span><span class="p">}</span> <span class="nx">has</span> <span class="nx">been</span> <span class="nx">removed</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">success</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_delete</span><span class="p">);</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">ko</span><span class="p">}</span> <span class="o">:</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">Snippet</span> <span class="nx">of</span> <span class="nx">id</span> <span class="p">{</span><span class="nx">id</span><span class="p">}</span> <span class="nx">does</span> <span class="nx">not</span> <span class="nx">exist</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">success</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">snippet_id_delete</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>Le méchanisme est similaire à celui décrit précédamment pour l'affichage d'un *snippet* particulier.
+La différence réside dans le traitement effectué une fois l'action faite du côté du modèle.
+Dans le cas de la suppression, nous affichons toujours un message à l'utilisateur pour lui indiquer si la suppression a bien été réalisée ou non.</p>
+
+<h4>Le controlleur.</h4>
+
+<div class="highlight"><pre><span class="nx">module</span> <span class="nx">Controller</span> <span class="p">{</span>
+
+    <span class="nx">dispatcher</span> <span class="o">=</span> <span class="nx">parser</span> <span class="p">{</span>
+            <span class="o">|</span> <span class="s2">"/"</span> <span class="o">-&gt;</span> <span class="nx">View</span><span class="p">.</span><span class="nx">simple_main_page</span><span class="p">()</span>
+            <span class="o">|</span> <span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">page</span><span class="p">(</span><span class="s2">"Hello"</span><span class="p">,</span> <span class="o">&lt;&gt;&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="s2">"404 NOT FOUND!"</span><span class="o">&lt;</span><span class="sr">/h2&gt;&lt;/</span><span class="o">&gt;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+
+<span class="nx">resources</span> <span class="o">=</span> <span class="err">@</span><span class="nx">static_resource_directory</span><span class="p">(</span><span class="s2">"resources"</span><span class="p">)</span>
+
+<span class="nx">Server</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">Server</span><span class="p">.</span><span class="nx">http</span><span class="p">,</span> <span class="p">[</span>
+  <span class="p">{</span> <span class="nx">register</span><span class="o">:</span>
+    <span class="p">[</span> <span class="p">{</span> <span class="nx">doctype</span><span class="o">:</span> <span class="p">{</span> <span class="nx">html5</span> <span class="p">}</span> <span class="p">},</span>
+      <span class="p">{</span> <span class="nx">js</span><span class="o">:</span> <span class="p">[</span> <span class="p">]</span> <span class="p">},</span>
+      <span class="p">{</span> <span class="nx">css</span><span class="o">:</span> <span class="p">[</span> <span class="s2">"/resources/css/style.css"</span><span class="p">]</span> <span class="p">}</span>
+    <span class="p">]</span>
+  <span class="p">},</span>
+  <span class="p">{</span> <span class="o">~</span><span class="nx">resources</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="nx">custom</span><span class="o">:</span> <span class="nx">Controller</span><span class="p">.</span><span class="nx">dispatcher</span> <span class="p">}</span>
+<span class="p">])</span>
+
+</pre></div>
+
+<p>Le code du controlleur ressemble fortement à celui de la précédente version. Nous lui ajoutons juste le chargement du fichier .css dans lequel nous avons défini le style pour quelques éléments de notre page.</p>
+
+<h4>Testons cette application.</h4>
+
+<p>Une fois l'application compliée et lancée, ouvrez votre navigateur à l'adresse <code>localhost:8080</code> qui est l'adresse par défaut.
+Vous voyez que la page affiche déjà les 3 <em>snippets</em> que nous avons crées au démarrage du serveur.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_1.png?raw=true" alt="snippets_v2_error_server_2.png"></p>
+
+<p>Nous créeons un nouveau snippet.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_2.png?raw=true" alt="snippets_v2_error_server_2.png"></p>
+
+<p>La page affiche bien maintenant les 4 contenus dans la base.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_3.png?raw=true" alt="snippets_v2_error_server_2.png"></p>
+
+<p>Testons maintent l'affichage d'un <em>snippet</em> en particulier.
+Entrez la valeur "3" dans le champ de saisie à droite du bouton 'Show snippet of id', puis validez en cliquant sur le bouton ou en appuyant sur la toûche 'Entrée'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_4.png?raw=true" alt="snippets_v2_error_server_2.png"></p>
+
+<p>Nous voyons que seul le <em>snippet</em> d'identifiant "3" est affiché.</p>
+
+<p>Testons maintenant la suppression d'un <em>snippet</em>.
+Entrez la valeur "4" dans le champ de saisie à droite du bouton 'Delete snippet of id', puis validez en cliquant sur le bouton ou en appuyant sur la toûche 'Entrée'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_5.png?raw=true" alt="snippets_v2_error_server_2.png"></p>
+
+<p>Vérifions que la suppression a bien été éfféctuée.
+Demandons l'affichage du <em>snippet</em> d'identifiant "4", soit celui que nous venons de supprimer.
+Entrez la valeur "4" dans le champ de saisie à droite du bouton 'Show snippet of id', puis validez en cliquant sur le bouton ou en appuyant sur la toûche 'Entrée'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_6.png?raw=true" alt="snippets_v2_error_server_2.png"></p>
+
+<p>Nous voyons que le système nous préviens que le <em>snippet</em> recherché n'existe pas.</p>
+
+<p>Demandons maintenant l'affichage de tous les <em>snippets</em> contenus dans la base.
+Cliquez sur le bouton 'Show all snippets'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_7.png?raw=true" alt="snippets_v2_error_server_2.png"></p>
+
+<p>Nous voyons bien que seulement 3 <em>snippets</em> sont affichés. Le <em>snippet</em> d'identifiant "4" a bien été supprimé de la base de données.</p>
+
+<h4>Conclusion.</h4>
+
+<p>Nous venons de voir comment gérer la persistance via l'utilisation d'une base de données <strong>NoSQL</strong> (en l'occurrence <strong>MongoDB</strong>).</p>
+</section>
+</div>
+
+<!-- FOOTER  -->
+<div id="footer_wrap" class="outer">
+  <footer class="inner">
+  <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+  </footer>
+</div>
+
+
+
+</body>
+</html>

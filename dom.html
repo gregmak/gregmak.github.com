@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset='utf-8' />
+<meta http-equiv="X-UA-Compatible" content="chrome=1" />
+<meta name="description" content="Gregmak.github.com : Manipulation du DOM" />
+<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+<title>Gregmak.github.com</title>
+</head>
+
+<body>
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+  <header class="inner">
+  <a id="forkme_banner" href="https://github.com/gregmak">View on GitHub</a>
+  <h1 id="project_title">Gregmak.github.com</h1>
+  <h2 id="project_tagline">Manipulation du DOM</h2>
+  </header>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main_content_wrap" class="outer">
+  <section id="main_content" class="inner">
+  <h2>Manipulation du DOM.</h2>
+
+  <p>Nous allons voir dans ce tutoriel comment manipuler le DOM en <strong>Opa</strong>.
+  Pour ce faire nous allons reprendre l'application ecrite précédamment et nous allons la modifier pour :</p>
+
+<ol>
+<li>permettre à l'utilisateur de créer ses <em>snippets</em> via un formulaire plutôt que via des requêtes <strong>REST</strong>
+</li>
+<li>que les <em>snippets</em> soient affichés dans la page web plutôt que dans la console du navigateur.</li>
+</ol><p>Nous avons donc besoin d'une part d'un formulaire et d'autre part d'afficher une liste de <em>snippets</em> qui va se mettre à jour au fur et à mesure des créations de <em>snippets</em>.</p>
+
+<h4>Le modèle.</h4>
+
+<p>Le code du modèle ne change pas.
+Nous allons donc passer directement à la vue, c'est-à-dire la gestion de l'affichage de la page web.
+Reportez-vous au précédent tutoriel pour voir le code du modèle.</p>
+
+<h4>La vue.</h4>
+
+<p>Nous allons maintenant éditer le ficher <code>src/view.opa</code> pour définir la structure de la page.
+Cette structure a changé car nous voulons maintenant afficher les <em>snippets</em> crées directement dans la page web.</p>
+
+<div class="highlight"><pre><span class="nx">module</span> <span class="nx">View</span> <span class="p">{</span>
+
+    <span class="kd">function</span> <span class="nx">initialize</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">snippet_one</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 1"</span><span class="p">,</span><span class="s2">"//FOO"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+    <span class="nx">snippet_two</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 2"</span><span class="p">,</span><span class="s2">"//Hello World"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+    <span class="nx">snippet_three</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 3"</span><span class="p">,</span><span class="s2">"//Me again !"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+
+    <span class="kd">function</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="p">};</span>
+
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_one</span><span class="p">,</span> <span class="nx">foo</span><span class="p">);</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_two</span><span class="p">,</span> <span class="nx">foo</span><span class="p">);</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_three</span><span class="p">,</span> <span class="nx">foo</span><span class="p">);</span>
+
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">content</span> <span class="o">=</span>
+        <span class="o">&lt;</span><span class="nx">li</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">title</span><span class="p">}</span> <span class="nx">by</span> <span class="p">{</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">user</span><span class="p">}</span><span class="o">&lt;</span><span class="err">/h2&gt;&lt;br&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">Markdown</span><span class="p">.</span><span class="nx">xhtml_of_string</span><span class="p">({</span><span class="nx">detect_text_links</span><span class="o">:</span> <span class="kc">true</span><span class="p">},</span> <span class="nx">snippet</span><span class="p">.</span><span class="nx">code</span><span class="p">)}</span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/li&gt;;</span>
+    <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">snippet</span><span class="o">-</span><span class="nx">list</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">content</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">append</span><span class="p">}}])</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">add_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">title</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">title</span><span class="p">);</span>
+    <span class="nx">code</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">code</span><span class="p">)</span>
+    <span class="nx">user</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">user</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">title</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">code</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">user</span> <span class="o">==</span> <span class="s2">""</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">All</span> <span class="nx">fields</span> <span class="nx">are</span> <span class="nx">mandatory</span><span class="p">.</span> <span class="nx">Please</span> <span class="nx">fill</span> <span class="nx">them</span> <span class="nx">all</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">error</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="nx">title</span><span class="p">,</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">user</span><span class="p">);</span>
+        <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">title</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">code</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">simple_main_page</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">title_bar</span> <span class="o">=</span>
+        <span class="o">&lt;&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"navbar navbar-fixed-top"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"navbar-inner"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"container"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">a</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"brand"</span> <span class="nx">href</span><span class="o">=</span><span class="s2">"#"</span><span class="o">&gt;</span>
+        <span class="o">&lt;&gt;</span><span class="nx">OPA</span><span class="o">&lt;</span><span class="err">/&gt;</span>
+        <span class="o">&lt;</span><span class="err">/a&gt;</span>
+            <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/&gt;;</span>
+    <span class="nx">form</span> <span class="o">=</span>
+        <span class="o">&lt;&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"snippet-form"</span> <span class="nx">style</span><span class="o">=</span><span class="s2">"margin-top:50px;"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="nx">Go</span> <span class="p">...</span><span class="o">&lt;</span><span class="err">/h2&gt;</span>
+        <span class="o">&lt;</span><span class="nx">form</span> <span class="nx">method</span><span class="o">=</span><span class="s2">"post"</span> <span class="nx">action</span><span class="o">=</span><span class="s2">"javascript:void(0);"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"well"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">label</span><span class="o">&gt;</span><span class="nx">Title</span> <span class="o">:</span> <span class="o">&lt;</span><span class="err">/label&gt;</span>
+            <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"title"</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"span3"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"title"</span><span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">label</span><span class="o">&gt;</span><span class="nx">Code</span> <span class="nx">Snippet</span> <span class="o">:</span> <span class="p">(</span><span class="kd">with</span> <span class="nx">markdown</span><span class="p">)</span> <span class="o">&lt;</span><span class="err">/label&gt;</span>
+            <span class="o">&lt;</span><span class="nx">textarea</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"code"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"code"</span> <span class="nx">style</span><span class="o">=</span><span class="s2">"width:100%"</span> <span class="nx">rows</span><span class="o">=</span><span class="s2">"5"</span><span class="o">&gt;&lt;</span><span class="err">/textarea&gt;</span>
+            <span class="o">&lt;</span><span class="nx">label</span><span class="o">&gt;</span><span class="nx">User</span> <span class="o">:</span> <span class="o">&lt;</span><span class="err">/label&gt;</span>
+            <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"user"</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text"</span> <span class="nx">placeholder</span><span class="o">=</span><span class="s2">"user"</span><span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"submit"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"btn"</span> <span class="nx">onclick</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">add_snippet</span><span class="p">()}}</span><span class="o">&gt;</span><span class="nx">Ajouter</span> <span class="nx">un</span> <span class="nx">Snippet</span><span class="o">&lt;</span><span class="err">/button&gt;</span>
+        <span class="o">&lt;</span><span class="err">/form&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/&gt;;</span>
+    <span class="nx">content</span> <span class="o">=</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">onready</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">initialize</span><span class="p">()}}</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">title_bar</span><span class="p">}</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"container"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">form</span><span class="p">}</span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="nx">ul</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"snippet-list"</span> <span class="nx">style</span><span class="o">=</span><span class="s2">"list-style: none;"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">li</span> <span class="nx">data</span><span class="o">-</span><span class="nx">template</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">hr</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="err">/li&gt;</span>
+        <span class="o">&lt;</span><span class="err">/ul&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"notifications"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="o">&lt;</span><span class="err">/div&gt;;</span>
+    <span class="nx">Resource</span><span class="p">.</span><span class="nx">page</span><span class="p">(</span><span class="s2">"StyKKeKode in OPA"</span><span class="p">,</span> <span class="nx">content</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+
+<h5>La structure de la page.</h5>
+
+<p>Nous voyons que la structure de la page est un peu plus complèxe que dans le tutoriel précédent, dans lequel nous nous contentions d'une simple page blanche.
+Notre page se compose maintenant d'une barre de titre, d'un formulaire de création de <em>snippets</em> et d'un emplacement pour afficherla liste des <em>snippets</em>.</p>
+
+<p>La barre de titre sert à donner un rendu à la page et permet d'avoir un lien permanent vers une des pages (par exemple la page d'acceuil) de l'application.</p>
+
+<p>La création du formulaire ne présente pas de difficultés particulières si vous avez déjà ecrits des formulaires HTML.
+Il vous faut préciser la méthode à utiliser pour envoyer les données vers le serveur : <strong>get</strong> ou <strong>post</strong> (ce tutoriel ne portant pas sur les différences entre ces méthodes, je ne les détaillerai pas ici), puis définir les champs qui composeront votre formulaire.
+Nous avons besoin ici de 3 champs de saisie (pour le titre du <em>snippet</em>, le code du <em>snippet</em> et le nom de l'utilisateur), ainsi que d'un bouton pour valider le formulaire et envoyer les données au serveur.
+Le titre et le nom de l'utilisateur seront renseignés dans deux <strong>input</strong> et le code du <em>snippet</em> dans un <strong>textarea</strong>.
+Au bouton de soumission est associée la méthode <strong>add_snippet()</strong> qui va lire les données dans les champs du formulaire et les envoyer au serveur pour que celui-ci puisse créer un nouveau <em>snippet</em>.</p>
+
+<p>Regardons le code de cette fonction plus en détails.</p>
+
+<h5>La récupération d'informations.</h5>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">add_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">title</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">title</span><span class="p">);</span>
+    <span class="nx">code</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">code</span><span class="p">)</span>
+    <span class="nx">user</span> <span class="o">=</span> <span class="nx">Dom</span><span class="p">.</span><span class="nx">get_value</span><span class="p">(</span><span class="err">#</span><span class="nx">user</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">title</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">code</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">user</span> <span class="o">==</span> <span class="s2">""</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">All</span> <span class="nx">fields</span> <span class="nx">are</span> <span class="nx">mandatory</span><span class="p">.</span> <span class="nx">Please</span> <span class="nx">fill</span> <span class="nx">them</span> <span class="nx">all</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">error</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="nx">title</span><span class="p">,</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">user</span><span class="p">);</span>
+        <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">title</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">code</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>La manipulation du DOM se fait en <strong>Opa</strong> via les fonctions du module Dom de la librairie standard.
+La récupération d'informations dans une page web se fait grâce à la méthode <strong>Dom.get_value</strong> qui prend en paramètre un élément de type <strong>dom</strong> et retourne une chaîne de caractères.
+Dans notre exemple, nous nous servons des identifiants pour récupérer les valeurs qui nous interressent. Ce n'est pas la seule façon de faire
+(ni même forcément la meilleure dans le sens où cela neccessite une gestion rigoureuse des identifiants pour éviter toute dupplication).</p>
+
+<p>Prenons l'exemple du titre du <em>snipet</em>.
+<br/>
+Dans la structure du formulaire nous avons déclaré le champ de saisie ainsi :
+<div><code>&lt;input id="title" type="text" class="span3" placeholder="title"/&gt;</code></div>
+
+Nous lui avons donc associé l'identifiant <em>title</em> : <code>id="title"</code>.
+<br/>
+Nous récupérons le titre entré par l'appel à la fonction Dom.get_value() en lui donnant en paramètre le champ concerné, ici récupéré via son identifiant <em>title</em> :
+<div><code>Dom.get_value(#title)</code></div>
+(simillairement à JQuery, la syntaxe <em>#id</em> fait référence à l'élément d'identifiant <em>id</em> contenu dans la page s'il existe).
+</p>
+
+<p>Une fois toues les données necessaires récupérées, nous les envoyons au serveur afin qu'il créé un nouveau <em>snippet</em>, puis efface les données du formulaire et met à jour la vue pour qu'elle soit synchronisée avec le modèle.</p>
+
+<div class="highlight"><pre>        <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="nx">title</span><span class="p">,</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">user</span><span class="p">);</span>
+        <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">title</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">code</span><span class="p">);</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">clear_value</span><span class="p">(</span><span class="err">#</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">display_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+        <span class="p">});</span>
+</pre></div>
+
+<p>La mise à jour de l'affichage de la liste des <em>snippets</em> se fait par l'appel à la fonction <strong>dispay_snippet</strong> en lui donnant en paramètre le <em>sippet</em> à afficher en plus de ceux déjà affichés.</p>
+
+<p>Regardons le code de cette fonction plus en détails.</p>
+
+<h5>La mise à jour de la vue.</h5>
+
+<pre lang="javascipt"><code>function display_snippet(snippet) {
+  content =
+    &lt;li&gt;
+    &lt;h2&gt;{snippet.title} by {snippet.user}&lt;/h2&gt;&lt;br&gt;
+    &lt;div&gt;{Markdown.xhtml_of_string({detect_text_links: true}, snippet.code)}&lt;/div&gt;
+  &lt;/li&gt;;
+  Dom.transform([{jq : #snippet-list, subject : {content : content}, verb : {append}}])
+}
+</code></pre>
+
+<p>La mise à jour de la vue en fonction du modèle est assez simple.
+Nous construisons le nouvel élément à insérer puis nous mettons à jour la liste des snippets.</p>
+
+<p>Nous avons défini à la création de notre page un endroit où afficher la liste des <em>snippets</em> contenus dans le modèle :</p>
+
+<div class="highlight"><pre>        <span class="o">&lt;</span><span class="nx">ul</span> <span class="nx">id</span><span class="o">=</span><span class="s2">"snippet-list"</span> <span class="nx">style</span><span class="o">=</span><span class="s2">"list-style: none;"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">li</span> <span class="nx">data</span><span class="o">-</span><span class="nx">template</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">hr</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="err">/li&gt;</span>
+        <span class="o">&lt;</span><span class="err">/ul&gt;</span>
+</pre></div>
+
+<p>Nous avons juste besoin d'indiquer au DOM que cette liste va contenir un nouvel élément qui est le nouveau snippet.</p>
+
+<div class="highlight"><pre><span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">snippet</span><span class="o">-</span><span class="nx">list</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">content</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">append</span><span class="p">}}])</span>
+</pre></div>
+
+<p>La fonction <strong>Dom.transform</strong> prend en argument un élément de type <strong>dom</strong> à modifier (que nous récupérons ici grâce à son identifiant <em>snippet-list</em>), et la façon de le modifier (cela peut être un ajout à la fin, un ajout au début ou un remplacement).
+Dans notre exemple nous utilisons la valeur <code>{append}</code> qui indique que l'on veut ajouter du contenu à la fin.</p>
+
+<h5>Gestion d'erreurs.</h5>
+
+<p>Nous avons ajouté dans notre exemple un premier niveau de gestion d'erreur.
+Dans le cas où tous les champs ne sont pas renseignés, un message d'erreur s'affiche sur la page web et aucune données n'est transmise au serveur.
+Cela permet d'avoir un contrôle sur la structure du formulaire côté client, sans avoir besoin d'envoyer une requête au serveur pour s'appercevoir que des données sont manquantes.
+Cela ne permet pas en revanche de s'affranchir d'un contrôle plus rigoureux des données côté serveur.</p>
+
+<div class="highlight"><pre>    <span class="k">if</span> <span class="p">(</span><span class="nx">title</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">code</span> <span class="o">==</span> <span class="s2">""</span> <span class="o">||</span> <span class="nx">user</span> <span class="o">==</span> <span class="s2">""</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">message</span> <span class="o">=</span> <span class="p">{</span><span class="nx">alert</span> <span class="o">:</span> <span class="p">{</span><span class="nx">title</span> <span class="o">:</span> <span class="s2">"Error"</span><span class="p">,</span> <span class="nx">description</span> <span class="o">:</span> <span class="o">&lt;&gt;</span> <span class="nx">All</span> <span class="nx">fields</span> <span class="nx">are</span> <span class="nx">mandatory</span><span class="p">.</span> <span class="nx">Please</span> <span class="nx">fill</span> <span class="nx">them</span> <span class="nx">all</span><span class="p">.</span> <span class="o">&lt;</span><span class="err">/&gt;}, closable : true};</span>
+        <span class="nx">alert</span> <span class="o">=</span> <span class="nx">WBootstrap</span><span class="p">.</span><span class="nx">Alert</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="p">{</span><span class="nx">error</span><span class="p">});</span>
+        <span class="nx">Dom</span><span class="p">.</span><span class="nx">transform</span><span class="p">([{</span><span class="nx">jq</span> <span class="o">:</span> <span class="err">#</span><span class="nx">notifications</span><span class="p">,</span> <span class="nx">subject</span> <span class="o">:</span> <span class="p">{</span><span class="nx">content</span> <span class="o">:</span> <span class="nx">alert</span><span class="p">},</span> <span class="nx">verb</span> <span class="o">:</span> <span class="p">{</span><span class="nx">set</span><span class="p">}}]);</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v2/snippets_v2_error_server.png?raw=true" alt="snippets_v2_error_server.png"></p>
+
+
+<h4>Le controlleur.</h4>
+
+<p>Dans cette version le code du controlleur est beaucoup plus simple et court car nous n'avons plus besoin des traiter des requêtes <strong>REST</strong>.
+Un simple parser d'URL permet de faire tourner notre application (nous n'avons qu'une page à servir).</p>
+
+<div class="highlight"><pre><span class="nx">module</span> <span class="nx">Controller</span> <span class="p">{</span>
+
+    <span class="nx">dispatcher</span> <span class="o">=</span> <span class="nx">parser</span> <span class="p">{</span>
+            <span class="o">|</span> <span class="s2">"/"</span> <span class="o">-&gt;</span> <span class="nx">View</span><span class="p">.</span><span class="nx">simple_main_page</span><span class="p">()</span>
+            <span class="o">|</span> <span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">page</span><span class="p">(</span><span class="s2">"Hello"</span><span class="p">,</span> <span class="o">&lt;&gt;&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="s2">"404 NOT FOUND!"</span><span class="o">&lt;</span><span class="sr">/h2&gt;&lt;/</span><span class="o">&gt;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+
+<span class="nx">Server</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">Server</span><span class="p">.</span><span class="nx">http</span><span class="p">,</span> <span class="p">{</span><span class="nx">custom</span> <span class="o">:</span> <span class="nx">Controller</span><span class="p">.</span><span class="nx">dispatcher</span><span class="p">})</span>
+</pre></div>
+
+<h4>Testons cette application.</h4>
+
+<p>Une fois l'application compilée et lancée, ouvrez votre navigateur à l'adresse indiquée.
+Vous voyez que la page affiche déjà les 3 <em>snippets</em> qu'on a créé au lancement du serveur. Le modèle et la vue sont donc bien synchronisés au démarrage du serveur.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v2/snippets_v2_1.png?raw=true" alt="snippets_v2_1.png"></p>
+
+<p>Entrez un titre et un code pour votre <em>sinppet</em>, votre nom et cliquez sur le bouton 'Ajouter un snippet'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v2/snippets_v2_2.png?raw=true" alt="snippets_v2_2.png"></p>
+
+<p>Vous voyez que la vue a bien été mise à jour avec votre nouveau snippet affiché en fin de liste.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v2/snippets_v2_3.png?raw=true" alt="snippets_v2_3.png"></p>
+
+<h4>Conclusion.</h4>
+
+<p>Nous venons de voir comment manipuler le DOM en <strong>Opa</strong> et comment synchroniser une vue et un modèle, en comparaison de ce qui est fait par le framework <strong>Backbone.js</strong>.</p>
+
+<p>Nous verrons dans d'autres tutoriels comment :</p>
+
+<ul>
+  <li>gérer la persistance via l'utilisation d'une base de données <strong>NoSQL</strong> (en l'occurrence <strong>MongoDB</strong>),</li>
+  <li>etc.</li>
+</ul>
+
+<!-- FOOTER  -->
+<div id="footer_wrap" class="outer">
+  <footer class="inner">
+  <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+  </footer>
+</div>
+
+</body>
+</html>

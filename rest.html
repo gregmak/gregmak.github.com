@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset='utf-8' />
+<meta http-equiv="X-UA-Compatible" content="chrome=1" />
+<meta name="description" content="Gregmak.github.com : Création d'un web-service RESTful" />
+<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+<title>Gregmak.github.com</title>
+</head>
+
+<body>
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+  <header class="inner">
+  <a id="forkme_banner" href="https://github.com/gregmak">View on GitHub</a>
+  <h1 id="project_title">Gregmak.github.com</h1>
+  <h2 id="project_tagline">Création d'un web-service RESTful</h2>
+  </header>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main_content_wrap" class="outer">
+  <section id="main_content" class="inner">
+  <h2>Création d'un web-service <strong>RESTful</strong>.</h2>
+
+  <p>Le premier de ces tutoriels portera sur la gestion en <strong>Opa</strong> des requêtes HTTP de type <strong>REST</strong> et permettra de comparer <strong>Opa</strong> avec <strong>Express.js</strong>, framework facilitant le développement de services <strong>RESTful</strong> en JavaScript.</p>
+
+  <p>Pour ce faire, nous allons écrire une petite application permettant de traiter des requêtes <strong>REST</strong> telles que <strong>POST</strong>, <strong>PUT</strong>, <strong>DELETE</strong> et <strong>GET</strong> et de manipuler des ressources en conséquence.
+  Cette application est inspirée de celle développée par <strong>k33g_org</strong> et dont vous pouvez voir le tutoriel à l'adresse <a href="http://k33g.github.com/2012/02/19/EXPRESSJS_IS_PLAY.html">http://k33g.github.com/2012/02/19/EXPRESSJS_IS_PLAY.html</a>.</p>
+
+  <h4>Pre-requis.</h4>
+
+  <p>Vous devez bien sûr installer <strong>Opa</strong>, téléchargeable directement depuis le site d'<a href="http://opalang.org">opalang</a>, ou depuis le <a href="https://github.com/MLstate/opalang">repo github d'opalang</a>.</p>
+
+  <p>Uns fois <strong>Opa</strong> téléchargé et installé, vous devriez avoir tout ce dont vous avez besoin. Il n'y a pas d'autres dépendances à installer (<strong>Node.js</strong> étant automatiquement installé par <strong>Opa</strong> s'il n'est pas détecté durant la phase de configuration).</p>
+
+  <h4>Le squelette de l'application.</h4>
+
+  <p><strong>Opa</strong> est livré avec un outil permettant de générer un squelette d'application basé sur le modèle <strong>MVC</strong>.</p>
+
+  <p>Ouvrez une console, placez vous à l'endroit souhaité et tappez simplement</p>
+
+  <p><code>opa create snippets</code></p>
+
+  <p>où <em>snippets</em> est le nom de notre application.</p>
+
+  <p>Cela va créer un repertoire <em>snippets</em> comprenant le squelette de notre application (pour plus de détails sur cet outil, regardez <a href="http://blog.opalang.org/2012/06/programming-tools-ux-how-we-simplified.html">l'article de Cédric Soulas sur le blog d'opalang</a>).</p>
+
+<h4>La configuration.</h4>
+
+<p>Un fichier nommé <code>opa.conf</code> est placé à la racine de l'application et décrit les importations nécessaires pour chaque fichier, que ce soit l'importation d'éléments de la librairie standard d'<strong>Opa</strong> ou d'un des autres fichiers source de l'application. Éditez ce fichier et modifier-le comme ceci :</p>
+
+<div class="highlight"><pre><span class="nx">snippets</span><span class="p">.</span><span class="nx">controller</span><span class="o">:</span>
+    <span class="kr">import</span> <span class="nx">snippets</span><span class="p">.</span><span class="nx">view</span>
+    <span class="kr">import</span> <span class="nx">snippets</span><span class="p">.</span><span class="nx">model</span> <span class="c1">// nouvelle ligne ajoutée</span>
+    <span class="nx">src</span><span class="o">/</span><span class="nx">controller</span><span class="p">.</span><span class="nx">opa</span>
+
+<span class="nx">snippets</span><span class="p">.</span><span class="nx">view</span><span class="o">:</span>
+    <span class="kr">import</span> <span class="nx">snippets</span><span class="p">.</span><span class="nx">model</span>
+    <span class="kr">import</span> <span class="nx">stdlib</span><span class="p">.</span><span class="nx">themes</span><span class="p">.</span><span class="nx">bootstrap</span>
+    <span class="nx">src</span><span class="o">/</span><span class="nx">view</span><span class="p">.</span><span class="nx">opa</span>
+
+<span class="nx">snippets</span><span class="p">.</span><span class="nx">model</span><span class="o">:</span>
+    <span class="nx">src</span><span class="o">/</span><span class="nx">model</span><span class="p">.</span><span class="nx">opa</span>
+</pre></div>
+
+<p>En ajoutant la ligne <code>import snippets.model</code>, nous avons indiqué au compilateur que le module <strong>Controller</strong> du fichier <code>src/controller.opa</code> a besoin de connaître certaines fonctions définies dans le module <strong>Model</strong> du fichier <code>src/model.opa</code>.</p>
+
+<p>Notez que ces déclarations peuvent aussi bien se faire en début de chaque fichier. Mais l'utilisation d'un fichier <code>opa.conf</code> a l'avantage de centraliser toutes les déclarations de ce type.</p>
+
+<h4>Le modèle.</h4>
+
+<p>Une fois le squelette créé, nous commençons par modifier le fichier <code>src/model.opa</code> pour y inclure la définition d'un <em>snippet</em> et les traitements associés.</p>
+
+<div class="highlight"><pre><span class="nx">type</span> <span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span> <span class="o">=</span> <span class="p">{</span><span class="nx">option</span><span class="p">(</span><span class="kr">int</span><span class="p">)</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">title</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">user</span><span class="p">}</span>
+
+<span class="nx">module</span> <span class="nx">Model</span> <span class="p">{</span>
+
+    <span class="c1">// the user context that will store the list of snippets</span>
+    <span class="nx">UserContext</span><span class="p">.</span><span class="nx">t</span><span class="p">(</span><span class="nx">list</span><span class="p">(</span><span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span><span class="p">))</span> <span class="nx">snippets</span> <span class="o">=</span> <span class="nx">UserContext</span><span class="p">.</span><span class="nx">make</span><span class="p">([]);</span>
+
+    <span class="kd">function</span> <span class="nx">make_snippet</span><span class="p">(</span><span class="nx">title</span><span class="p">,</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">{</span><span class="nx">id</span><span class="o">:</span> <span class="p">{</span><span class="nx">none</span><span class="p">},</span> <span class="o">~</span><span class="nx">title</span><span class="p">,</span> <span class="o">~</span><span class="nx">code</span><span class="p">,</span> <span class="o">~</span><span class="nx">user</span><span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">match</span> <span class="p">(</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">id</span><span class="p">}</span><span class="o">:</span> <span class="c1">// existing snippet</span>
+        <span class="nx">UserContext</span><span class="p">.</span><span class="nx">change</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">snippets</span> <span class="o">=</span> <span class="nx">List</span><span class="p">.</span><span class="nx">remove_p</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">id</span> <span class="o">==</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">id</span><span class="p">}}),</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="nx">List</span><span class="p">.</span><span class="nx">cons</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="p">}),</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="c1">// applying the callback onto the given snippet</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="k">default</span><span class="o">:</span> <span class="c1">// new snippet</span>
+        <span class="nx">l</span> <span class="o">=</span> <span class="nx">UserContext</span><span class="p">.</span><span class="nx">execute</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span><span class="nx">List</span><span class="p">.</span><span class="nx">length</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)}),</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="nx">id</span> <span class="o">=</span> <span class="k">if</span> <span class="p">(</span><span class="nx">l</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">)</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="mi">1</span><span class="p">}</span> <span class="k">else</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">}</span>
+        <span class="nx">snippet</span> <span class="o">=</span> <span class="p">{</span><span class="nx">snippet</span> <span class="kd">with</span> <span class="o">~</span><span class="nx">id</span><span class="p">}</span>
+        <span class="nx">UserContext</span><span class="p">.</span><span class="nx">change</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// the list is reinitiallized every 5 snippets</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">l</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">)</span> <span class="p">[</span><span class="nx">snippet</span><span class="p">]</span>
+        <span class="k">else</span> <span class="nx">List</span><span class="p">.</span><span class="nx">cons</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="nx">snippets</span><span class="p">)</span>
+        <span class="p">}),</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="c1">// applying the callback onto the updated snippet</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="p">};</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">delete_snippet</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">match</span> <span class="p">(</span><span class="nx">find_by_id</span><span class="p">(</span><span class="nx">id</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">snippet</span><span class="p">}</span> <span class="o">:</span>
+        <span class="nx">UserContext</span><span class="p">.</span><span class="nx">change</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">List</span><span class="p">.</span><span class="nx">remove_p</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">id</span> <span class="o">==</span> <span class="nx">id</span><span class="p">}),</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="p">}),</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="c1">// applying the callback onto the found snippet</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+    <span class="k">default</span> <span class="o">:</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">source</span><span class="p">(</span><span class="s2">"\{\"toto\":\"ERROR\"}"</span><span class="p">,</span> <span class="s2">"application/json"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">find_all</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">UserContext</span><span class="p">.</span><span class="nx">execute</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">callback</span><span class="p">(</span><span class="nx">snippets</span><span class="p">);</span>
+    <span class="p">}),</span> <span class="nx">snippets</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">find_by_id</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">UserContext</span><span class="p">.</span><span class="nx">execute</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">List</span><span class="p">.</span><span class="nx">find</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">id</span> <span class="o">==</span> <span class="nx">id</span><span class="p">}),</span> <span class="nx">snippets</span><span class="p">);</span>
+    <span class="p">}),</span> <span class="nx">snippets</span><span class="p">);</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+
+<p>Ce fichier ne présente pas de grandes difficultés si vous êtes familiers avec <strong>Opa</strong> et la programmation fonctionnelle.</p>
+
+<p>La seule particularité est l'utilisation du <strong>UserContext</strong>. Ce module, appartenant à la librairie standard d'<strong>Opa</strong>, est un des moyens offerts par <strong>Opa</strong> permettant la création et la manipulation d'éléments mutables.</p>
+
+<h4>La vue.</h4>
+
+<p>Nous allons maintenant éditer le ficher <code>src/view.opa</code> pour définir la structure de la page.</p>
+
+<div class="highlight"><pre><span class="nx">module</span> <span class="nx">View</span> <span class="p">{</span>
+
+    <span class="kd">function</span> <span class="nx">initialize</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">snippet_one</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 1"</span><span class="p">,</span><span class="s2">"//FOO"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+    <span class="nx">snippet_two</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 2"</span><span class="p">,</span><span class="s2">"//Hello World"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+    <span class="nx">snippet_three</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="s2">"essai 3"</span><span class="p">,</span><span class="s2">"//Me again !"</span><span class="p">,</span><span class="s2">"gregmak"</span><span class="p">);</span>
+
+    <span class="kd">function</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jlog</span><span class="p">(</span><span class="nx">snippet</span><span class="p">.</span><span class="nx">title</span><span class="p">);</span>
+    <span class="p">};</span>
+
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_one</span><span class="p">,</span> <span class="nx">foo</span><span class="p">);</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_two</span><span class="p">,</span> <span class="nx">foo</span><span class="p">);</span>
+    <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet_three</span><span class="p">,</span> <span class="nx">foo</span><span class="p">);</span>
+    <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">simple_main_page</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">content</span> <span class="o">=</span>
+    <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">onready</span><span class="o">=</span><span class="p">{</span><span class="kd">function</span><span class="p">(</span><span class="nx">_</span><span class="p">)</span> <span class="p">{</span><span class="nx">initialize</span><span class="p">()}}</span><span class="o">&gt;</span> <span class="c1">// on initialise la liste de snippets au chargement de la page</span>
+    <span class="o">&lt;</span><span class="err">/div&gt;;</span>
+    <span class="nx">Resource</span><span class="p">.</span><span class="nx">page</span><span class="p">(</span><span class="s2">"Hello"</span><span class="p">,</span> <span class="nx">content</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Notez ici que vous pouvez écrire directement du code HTML dans du code <strong>Opa</strong>. La création de pages web en <strong>Opa</strong> n'etant pas le sujet de ce tutoriel, nous nous contenterons d'une simple page vierge suffisante au bon déroulement de notre application. Il faut juste penser à créer les premiers <em>snippets</em> au chargement de la page.</p>
+
+<h4>Le contrôleur.</h4>
+
+<p>Il nous reste maintenant à gérer la définition du serveur, le dispatcheur (ou routeur) et le traitements des requêtes <strong>REST</strong>.
+Cela se fait dans le fichier <code>src/controller.opa</code>, que nous allons éditer et modifier comme cela :</p>
+
+<div class="highlight"><pre><span class="nx">module</span> <span class="nx">Controller</span> <span class="p">{</span>
+
+   <span class="kd">function</span> <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">Model</span><span class="p">.</span><span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">){</span>
+            <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">Json</span><span class="p">.</span><span class="nx">serialize</span><span class="p">(</span><span class="nx">snippet</span><span class="p">));</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">parse_query</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">match</span> <span class="p">(</span><span class="nx">HttpRequest</span><span class="p">.</span><span class="nx">get_body</span><span class="p">())</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">body</span><span class="p">}</span> <span class="o">-&gt;</span> <span class="p">{</span>
+            <span class="nx">p</span> <span class="o">=</span> <span class="nx">parser</span> <span class="p">{</span>
+                <span class="o">|</span> <span class="nx">s</span> <span class="o">=</span> <span class="nx">UriParser</span><span class="p">.</span><span class="nx">query_element</span> <span class="o">-&gt;</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="nx">model</span><span class="p">)</span> <span class="o">:</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">model</span><span class="p">);</span>
+            <span class="k">default</span> <span class="o">:</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span><span class="nb">String</span> <span class="o">:</span> <span class="s2">"ERROR DURING REQUEST PARSING"</span><span class="p">});</span>
+            <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="o">|</span> <span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span><span class="nb">String</span> <span class="o">:</span> <span class="s2">"ERROR DURING REQUEST PARSING"</span><span class="p">});</span>
+        <span class="p">};</span>
+        <span class="nx">Parser</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">p</span><span class="p">,</span> <span class="nx">body</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">default</span> <span class="o">:</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span><span class="nb">String</span> <span class="o">:</span> <span class="s2">"ERROR DURING REQUEST PARSING"</span><span class="p">});</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">create_snippet</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">parse_query</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">model</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nb">String</span><span class="p">.</span><span class="nx">unserialize</span><span class="p">(</span><span class="nx">model</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">value</span><span class="p">}</span> <span class="o">:</span>
+            <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="nx">value</span><span class="p">.</span><span class="nx">title</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">code</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+            <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+            <span class="k">default</span> <span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet creation"</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">update_snippet</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">parse_query</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">model</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">partial_unserialize</span><span class="p">(</span><span class="nx">model</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">json</span><span class="p">}</span> <span class="o">:</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">Json</span><span class="p">.</span><span class="nx">unserialize_unsorted</span><span class="p">(</span><span class="nx">json</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">snippet</span><span class="p">}</span> <span class="o">:</span> <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span>
+            <span class="k">default</span> <span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet update"</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="k">default</span><span class="o">:</span>  <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet update"</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">delete_snippet</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">parse_query</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">model</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nb">String</span><span class="p">.</span><span class="nx">unserialize</span><span class="p">(</span><span class="nx">model</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">value</span><span class="p">}</span> <span class="o">:</span>
+            <span class="nx">Model</span><span class="p">.</span><span class="nx">delete_snippet</span><span class="p">({</span><span class="nx">some</span><span class="o">:</span> <span class="nx">value</span><span class="p">.</span><span class="nx">id</span><span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">){</span>
+            <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">Json</span><span class="p">.</span><span class="nx">serialize</span><span class="p">(</span><span class="nx">snippet</span><span class="p">));</span>
+            <span class="p">});</span>
+            <span class="k">default</span><span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet deletion"</span><span class="p">);</span>
+            <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">get_snippet</span><span class="p">(</span><span class="nx">path</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">p</span> <span class="o">=</span> <span class="nx">parser</span> <span class="p">{</span>
+            <span class="o">|</span> <span class="nx">s</span> <span class="o">=</span> <span class="nx">UriParser</span><span class="p">.</span><span class="nx">query</span> <span class="o">-&gt;</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">[(</span><span class="s2">"model"</span><span class="p">,</span> <span class="nx">model</span><span class="p">)</span> <span class="o">|</span> <span class="nx">_</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="p">{</span>
+                <span class="nx">match</span> <span class="p">(</span><span class="nx">Json</span><span class="p">.</span><span class="nx">deserialize</span><span class="p">(</span><span class="nx">model</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="nx">Record</span><span class="o">:</span> <span class="p">[(</span><span class="nx">_</span><span class="p">,</span> <span class="p">{</span><span class="nx">Int</span> <span class="o">:</span> <span class="nx">id</span><span class="p">})]}}</span><span class="o">:</span>
+                <span class="nx">match</span> <span class="p">(</span><span class="nx">Model</span><span class="p">.</span><span class="nx">find_by_id</span><span class="p">({</span><span class="nx">some</span><span class="o">:</span> <span class="nx">id</span><span class="p">}))</span> <span class="p">{</span>
+                <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">snippet</span><span class="p">}</span> <span class="o">:</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">Json</span><span class="p">.</span><span class="nx">serialize</span><span class="p">(</span><span class="nx">snippet</span><span class="p">));</span>
+                <span class="k">default</span> <span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet get"</span><span class="p">);</span>
+                <span class="p">};</span>
+                <span class="k">default</span><span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet get"</span><span class="p">);</span>
+                <span class="p">};</span>
+            <span class="p">}</span>
+            <span class="k">default</span> <span class="o">-&gt;</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet get"</span><span class="p">)</span>
+        <span class="p">}</span>
+            <span class="o">|</span> <span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">source</span><span class="p">(</span><span class="s2">"\{\"toto\":\"POST KO\"}"</span><span class="p">,</span> <span class="s2">"application/json"</span><span class="p">);</span>
+        <span class="p">};</span>
+        <span class="nx">Parser</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">p</span><span class="p">,</span> <span class="nx">path</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">get_all_snippets</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">Model</span><span class="p">.</span><span class="nx">find_all</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippets</span><span class="p">){</span>
+        <span class="nx">list</span> <span class="o">=</span> <span class="nx">List</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="kd">function</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span> <span class="p">{</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">Json</span><span class="p">.</span><span class="nx">serialize</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)}),</span> <span class="nx">snippets</span><span class="p">);</span>
+        <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span><span class="nx">List</span> <span class="o">:</span> <span class="nx">list</span><span class="p">})</span>
+    <span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="cm">/*  LE SERVEUR AVEC LE GESTIONNAIRE DE REQUETES */</span>
+
+    <span class="nx">dispatcher</span> <span class="o">=</span> <span class="nx">parser</span> <span class="p">{</span>
+            <span class="o">|</span> <span class="s2">"/"</span> <span class="o">-&gt;</span> <span class="nx">View</span><span class="p">.</span><span class="nx">simple_main_page</span><span class="p">()</span>
+            <span class="o">|</span> <span class="s2">"/snippets"</span> <span class="o">-&gt;</span> <span class="nx">get_all_snippets</span><span class="p">();</span>
+            <span class="o">|</span> <span class="s2">"/snippet"</span> <span class="nx">path</span><span class="o">=</span><span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">HttpRequest</span><span class="p">.</span><span class="nx">get_method</span><span class="p">())</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="nx">post</span><span class="p">}}</span><span class="o">:</span> <span class="nx">create_snippet</span><span class="p">();</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="nx">put</span><span class="p">}}</span><span class="o">:</span> <span class="nx">update_snippet</span><span class="p">();</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="nx">get</span><span class="p">}}</span><span class="o">:</span> <span class="nx">get_snippet</span><span class="p">(</span><span class="nx">Text</span><span class="p">.</span><span class="nx">to_string</span><span class="p">(</span><span class="nx">path</span><span class="p">));</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="k">delete</span><span class="p">}}</span><span class="o">:</span> <span class="nx">delete_snippet</span><span class="p">();</span>
+            <span class="k">default</span><span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during method inspection"</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="o">|</span> <span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">page</span><span class="p">(</span><span class="s2">"Hello"</span><span class="p">,</span> <span class="o">&lt;&gt;&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="s2">"404 NOT FOUND!"</span><span class="o">&lt;</span><span class="sr">/h2&gt;&lt;/</span><span class="o">&gt;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+
+<span class="nx">Server</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">Server</span><span class="p">.</span><span class="nx">http</span><span class="p">,</span> <span class="p">{</span><span class="nx">custom</span> <span class="o">:</span> <span class="nx">Controller</span><span class="p">.</span><span class="nx">dispatcher</span><span class="p">})</span>
+</pre></div>
+
+<p>Ce fichier présente plusieurs concepts clés que nous allons regarder de plus près.</p>
+
+<h5>Le traitement des requêtes et méthodes HTTP :</h5>
+
+<p>Un serveur <strong>Opa</strong> est associé à un gestionnaire d'URL, ou routes. La gestion des routes se fait via un <em>parser</em> d'<strong>URL</strong> : en fonction de l'<strong>URL</strong> reçue on redirige vers des traitements ou des pages spécifiques. C'est  l'équivalent <strong>Opa</strong> de l'objet <strong>app.routes</strong> de <strong>Express.js</strong> et de la classe <strong>Router</strong> de <strong>Backbone.js</strong>. La variable <em>dispatcher</em> s'occupe de cela.</p>
+
+<div class="highlight"><pre>    <span class="nx">dispatcher</span> <span class="o">=</span> <span class="nx">parser</span> <span class="p">{</span>
+            <span class="o">|</span> <span class="s2">"/"</span> <span class="o">-&gt;</span> <span class="nx">View</span><span class="p">.</span><span class="nx">simple_main_page</span><span class="p">()</span>
+            <span class="o">|</span> <span class="s2">"/snippets"</span> <span class="o">-&gt;</span> <span class="nx">get_all_snippets</span><span class="p">();</span>
+            <span class="o">|</span> <span class="s2">"/snippet"</span> <span class="nx">path</span><span class="o">=</span><span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">HttpRequest</span><span class="p">.</span><span class="nx">get_method</span><span class="p">())</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="nx">post</span><span class="p">}}</span><span class="o">:</span> <span class="nx">create_snippet</span><span class="p">();</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="nx">put</span><span class="p">}}</span><span class="o">:</span> <span class="nx">update_snippet</span><span class="p">();</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="nx">get</span><span class="p">}}</span><span class="o">:</span> <span class="nx">get_snippet</span><span class="p">(</span><span class="nx">Text</span><span class="p">.</span><span class="nx">to_string</span><span class="p">(</span><span class="nx">path</span><span class="p">));</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="p">{</span><span class="k">delete</span><span class="p">}}</span><span class="o">:</span> <span class="nx">delete_snippet</span><span class="p">();</span>
+            <span class="k">default</span><span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during method inspection"</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="o">|</span> <span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">page</span><span class="p">(</span><span class="s2">"Hello"</span><span class="p">,</span> <span class="o">&lt;&gt;&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="s2">"404 NOT FOUND!"</span><span class="o">&lt;</span><span class="sr">/h2&gt;&lt;/</span><span class="o">&gt;</span><span class="p">)</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>La gestion des requêtes de type <strong>REST</strong> se fait ici en récupérant la méthode associée à la requête reçue (grâce à la fonction <strong>HttpRequest.get_method()</strong> de la librairie standard d'<strong>Opa</strong>) et d'effectuer un traitement spécifique en fonction de la méthode employée. On effectue pour ce faire un <em>pattern-matching</em> sur le résultat renvoyé : en fonction du résultat retourné, on applique une fonction spécifique.</p>
+
+<p>Par exemple, dans le cas de la réception d'une requête <strong>POST</strong>, la fonction <strong>HttpRequest.get_method()</strong> retourne la valeur <code>{some : {post}}</code> et l'on voit que le <em>dispatcher</em> associe à cette valeur la fonction <strong>create_snippet</strong> :</p>
+
+<div class="highlight"><pre><span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="p">{</span><span class="nx">post</span><span class="p">}}</span><span class="o">:</span> <span class="nx">create_snippet</span><span class="p">();</span>
+</pre></div>
+
+<p>Regardons plus en détails le code de cette fonction :</p>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">create_snippet</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">parse_query</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">model</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nb">String</span><span class="p">.</span><span class="nx">unserialize</span><span class="p">(</span><span class="nx">model</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">value</span><span class="p">}</span> <span class="o">:</span>
+            <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="nx">value</span><span class="p">.</span><span class="nx">title</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">code</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+            <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+            <span class="k">default</span> <span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet creation"</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>La fonction <strong>create_snippet</strong> fait un appel à la fonction <strong>parse_query</strong> en lui donnant une fonction de traitement (que nous allons détailler plus loin). Regardons d'abord le corps de la fonction <strong>parse_query</strong> :</p>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">parse_query</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">match</span> <span class="p">(</span><span class="nx">HttpRequest</span><span class="p">.</span><span class="nx">get_body</span><span class="p">())</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">body</span><span class="p">}</span> <span class="o">-&gt;</span> <span class="p">{</span>
+            <span class="nx">p</span> <span class="o">=</span> <span class="nx">parser</span> <span class="p">{</span>
+                <span class="o">|</span> <span class="nx">s</span> <span class="o">=</span> <span class="nx">UriParser</span><span class="p">.</span><span class="nx">query_element</span> <span class="o">-&gt;</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="nx">model</span><span class="p">)</span> <span class="o">:</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">model</span><span class="p">);</span>
+            <span class="k">default</span> <span class="o">:</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span><span class="nb">String</span> <span class="o">:</span> <span class="s2">"ERROR DURING REQUEST PARSING"</span><span class="p">});</span>
+            <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="o">|</span> <span class="p">(.</span><span class="o">*</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span><span class="nb">String</span> <span class="o">:</span> <span class="s2">"ERROR DURING REQUEST PARSING"</span><span class="p">});</span>
+        <span class="p">};</span>
+        <span class="nx">Parser</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">p</span><span class="p">,</span> <span class="nx">body</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">default</span> <span class="o">:</span> <span class="nx">Resource</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span><span class="nb">String</span> <span class="o">:</span> <span class="s2">"ERROR DURING REQUEST PARSING"</span><span class="p">});</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>Nous avons besoin de récupérer le corps de la requête (grâce à la fonction <strong>HttpRequest.get_body()</strong> de la librairie standard d'<strong>Opa</strong>). Une fois ce corps récupéré, il faut l'analyser pour en extraire les éléments constituants la requête, ce qui est fait ici grâce à un <em>parser</em> d'<strong>URI</strong>, et enfin appliquer une fonction de traitement (<em>callback</em>, donné en paramètre de la fonction) sur ces éléments.</p>
+
+<h5>Le traitement des données JSON.</h5>
+
+<p>Nous venons de voir comment les éléments constituants la requête avaient été récupérés. Regardons maintenant comment nous pouvons manipuler ces éléments.</p>
+
+<p>Reprenons le code de la fonction <strong>create_snippet</strong> :</p>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">create_snippet</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">parse_query</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">model</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nb">String</span><span class="p">.</span><span class="nx">unserialize</span><span class="p">(</span><span class="nx">model</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">value</span><span class="p">}</span> <span class="o">:</span>
+            <span class="nx">snippet</span> <span class="o">=</span> <span class="nx">Model</span><span class="p">.</span><span class="nx">make_snippet</span><span class="p">(</span><span class="nx">value</span><span class="p">.</span><span class="nx">title</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">code</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+            <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">);</span>
+            <span class="k">default</span> <span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet creation"</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>Les éléments constituants la requête sont récupérés sous la forme d'une chaîne de caractères représentant une donnée au format JSON. Nous devons donc décoder cette chaîne de caractères pour récupérer un élément manipulable. Cela est fait par l'appel à la fonction <strong>OpaSerialize.String.unserialize</strong> qui prend en paramètre la chaîne de caractères et retourne un <em>record</em> correspondant. Nous pouvons donc maintenant créer un nouveau <em>snippet</em> à partir des champs <strong>title</strong>, <strong>code</strong> et <strong>user</strong> du <em>record</em> précédemment créé, et le sauvegarder.</p>
+
+<p>Notez que l'on peut aussi, à partir d'une chaîne de caractères représentant un objet d'un type Opa connu décrit au format JSON, construire directement l'objet correspondant. Cela est par exemple fait dans la fonction <strong>update_snippet</strong> :</p>
+
+<div class="highlight"><pre>    <span class="kd">function</span> <span class="nx">update_snippet</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">parse_query</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">model</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">partial_unserialize</span><span class="p">(</span><span class="nx">model</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="nx">json</span><span class="p">}</span> <span class="o">:</span>
+            <span class="nx">match</span> <span class="p">(</span><span class="nx">OpaSerialize</span><span class="p">.</span><span class="nx">Json</span><span class="p">.</span><span class="nx">unserialize_unsorted</span><span class="p">(</span><span class="nx">json</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="p">{</span><span class="nx">some</span><span class="o">:</span> <span class="nx">snippet</span><span class="p">}</span> <span class="o">:</span> <span class="nx">save_snippet</span><span class="p">(</span><span class="nx">snippet</span><span class="p">)</span>
+            <span class="k">default</span> <span class="o">:</span> <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet update"</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="k">default</span><span class="o">:</span>  <span class="nx">error</span><span class="p">(</span><span class="s2">"error during snippet update"</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">}</span>
+</pre></div>
+
+<p>A partir de la chaîne de caractères, on construit un objet de type <em>RPC.Json.json</em> grâce à la fonction <strong>OpaSerialize.partial_unserialize</strong>. Il nous reste à décoder cet objet grâce à la fonction <strong>OpaSerialize.Json.unserialize_unsorted</strong> (<em>unsorted</em> car les champs dans la requête ne sont pas triés). Nous obtenons alors directement un objet du type <em>Snippet.t</em> que nous pouvons donc sauvegarder.</p>
+
+<h4>Testons cette application.</h4>
+
+<p>Nous avons donc terminé notre petite application, c'est le moment de la tester.
+Ouvrez un navigateur internet, ouvrez la console JavaScript et entrez les commandes suivantes :</p>
+
+<h5>Création de snippet.</h5>
+
+<div class="highlight"><pre><span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+    <span class="nx">type</span><span class="o">:</span> <span class="s2">"POST"</span><span class="p">,</span>
+    <span class="nx">url</span><span class="o">:</span> <span class="s2">"/snippet"</span><span class="p">,</span>
+    <span class="nx">data</span><span class="o">:</span> <span class="p">{</span><span class="s2">"model"</span><span class="o">:</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+        <span class="nx">title</span><span class="o">:</span><span class="s2">"Hello World"</span><span class="p">,</span>
+        <span class="nx">code</span> <span class="o">:</span> <span class="s2">"println('Hello world')"</span><span class="p">,</span>
+        <span class="nx">user</span> <span class="o">:</span> <span class="s2">"@gregmak"</span>
+    <span class="p">})},</span>
+    <span class="nx">dataType</span><span class="o">:</span> <span class="s1">'json'</span><span class="p">,</span>
+    <span class="nx">error</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"oups"</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="nx">success</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">dataFromServer</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">dataFromServer</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v1/post.png?raw=true" alt="post.png"></p>
+
+<p>On remarque que le serveur nous a renvoyé l'objet créé avec un nouvel <em>id</em> associé. Comme nous avions défini 3 <em>snippets</em>, le nouveau <em>snippet</em> a été créé avec l'<em>id</em> 4.</p>
+
+<h5>Mise à jour de snippet.</h5>
+
+<div class="highlight"><pre><span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+    <span class="nx">type</span><span class="o">:</span> <span class="s2">"PUT"</span><span class="p">,</span>
+    <span class="nx">url</span><span class="o">:</span> <span class="s2">"/snippet"</span><span class="p">,</span>
+    <span class="nx">data</span><span class="o">:</span> <span class="p">{</span><span class="s2">"model"</span><span class="o">:</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+        <span class="nx">id</span> <span class="o">:</span> <span class="p">{</span><span class="nx">some</span> <span class="o">:</span> <span class="mi">4</span><span class="p">},</span> <span class="cm">/*vérifier que l'id existe*/</span>
+        <span class="nx">title</span><span class="o">:</span><span class="s2">"Hello World"</span><span class="p">,</span>
+        <span class="nx">code</span> <span class="o">:</span> <span class="s2">"println('Hello world $name')"</span><span class="p">,</span>
+        <span class="nx">user</span> <span class="o">:</span> <span class="s2">"@GREGMAK"</span>
+    <span class="p">})},</span>
+    <span class="nx">dataType</span><span class="o">:</span> <span class="s1">'json'</span><span class="p">,</span>
+    <span class="nx">error</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"oups"</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="nx">success</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">dataFromServer</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">dataFromServer</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v1/put.png?raw=true" alt="put.png"></p>
+
+<p>Le serveur nous a renvoyé l'objet avec le champ <em>user</em> ayant la nouvelle valeur.</p>
+
+<h5>Recherche de snippet.</h5>
+
+<div class="highlight"><pre><span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+    <span class="nx">type</span><span class="o">:</span> <span class="s2">"GET"</span><span class="p">,</span>
+    <span class="nx">url</span><span class="o">:</span> <span class="s2">"/snippet"</span><span class="p">,</span>
+    <span class="nx">data</span><span class="o">:</span> <span class="p">{</span><span class="s2">"model"</span><span class="o">:</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span><span class="nx">id</span><span class="o">:</span><span class="mi">1</span><span class="p">})},</span>
+    <span class="nx">dataType</span><span class="o">:</span> <span class="s1">'json'</span><span class="p">,</span>
+    <span class="nx">error</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"oups"</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="nx">success</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">dataFromServer</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">dataFromServer</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v1/get.png?raw=true" alt="get.png"></p>
+
+<p>Le serveur nous a bien renvoyé le <em>snippet</em> d'<em>id</em> 1.</p>
+
+<h5>Suppression de snippet.</h5>
+
+<div class="highlight"><pre><span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+    <span class="nx">type</span><span class="o">:</span> <span class="s2">"DELETE"</span><span class="p">,</span>
+    <span class="nx">url</span><span class="o">:</span> <span class="s2">"/snippet"</span><span class="p">,</span>
+    <span class="nx">data</span><span class="o">:</span> <span class="p">{</span><span class="s2">"model"</span><span class="o">:</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span><span class="nx">id</span><span class="o">:</span><span class="mi">1</span><span class="p">})},</span>
+    <span class="nx">dataType</span><span class="o">:</span> <span class="s1">'json'</span><span class="p">,</span>
+    <span class="nx">error</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"oups"</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="nx">success</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">dataFromServer</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">dataFromServer</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v1/delete.png?raw=true" alt="delete.png"></p>
+
+<h5>Liste de tous les snippet.</h5>
+
+<div class="highlight"><pre><span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+    <span class="nx">type</span><span class="o">:</span> <span class="s2">"GET"</span><span class="p">,</span>
+    <span class="nx">url</span><span class="o">:</span> <span class="s2">"/snippets"</span><span class="p">,</span>
+    <span class="nx">data</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nx">dataType</span><span class="o">:</span> <span class="s1">'json'</span><span class="p">,</span>
+    <span class="nx">error</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"oups"</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="nx">success</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">dataFromServer</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">dataFromServer</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">model</span><span class="p">){</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">model</span><span class="p">)</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v1/getAll.png?raw=true" alt="getAll.png"></p>
+
+<p>Le serveur nous a renvoyé une liste de 3 <em>snippets</em>, le <em>snippet</em> d'<em>id</em> 1 ayant été supprimé précédemment.</p>
+
+<h4>Conclusion.</h4>
+
+<p>Nous venons de voir comment gérer les requêtes <strong>REST</strong> en <strong>Opa</strong> en comparaison de ce qui est fait par le framework <strong>Express.js</strong>.</p>
+
+<p>Nous verrons dans d'autres tutoriels comment :</p>
+
+<ul>
+  <li>manipuler le <strong>DOM</strong> afin de synchroniser les modèles et les vues associées,</li>
+  <li>gérer la persistance via l'utilisation d'une base de données <strong>NoSQL</strong> (en l'occurrence <strong>MongoDB</strong>),</li>
+  <li>etc.</li>
+  /<ul>
+
+  <!-- FOOTER  -->
+  <div id="footer_wrap" class="outer">
+    <footer class="inner">
+    <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+    </footer>
+  </div>
+
+  </body>
+  </html>
