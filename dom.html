@@ -35,22 +35,22 @@
   <p>Nous allons voir dans ce tutoriel comment manipuler le DOM en <strong>Opa</strong>.
   Pour ce faire nous allons reprendre l'application ecrite précédamment et nous allons la modifier pour :</p>
 
-<ol>
-<li>permettre à l'utilisateur de créer ses <em>snippets</em> via un formulaire plutôt que via des requêtes <strong>REST</strong>
-</li>
-<li>que les <em>snippets</em> soient affichés dans la page web plutôt que dans la console du navigateur.</li>
-</ol><p>Nous avons donc besoin d'une part d'un formulaire et d'autre part d'afficher une liste de <em>snippets</em> qui va se mettre à jour au fur et à mesure des créations de <em>snippets</em>.</p>
+  <ol>
+    <li>permettre à l'utilisateur de créer ses <em>snippets</em> via un formulaire plutôt que via des requêtes <strong>REST</strong>
+    </li>
+    <li>que les <em>snippets</em> soient affichés dans la page web plutôt que dans la console du navigateur.</li>
+  </ol><p>Nous avons donc besoin d'une part d'un formulaire et d'autre part d'afficher une liste de <em>snippets</em> qui va se mettre à jour au fur et à mesure des créations de <em>snippets</em>.</p>
 
-<h4>Le modèle.</h4>
+  <h4>Le modèle.</h4>
 
-<p>Le code du modèle ne change pas.
-Nous allons donc passer directement à la vue, c'est-à-dire la gestion de l'affichage de la page web.
-Reportez-vous au précédent tutoriel pour voir le code du modèle.</p>
+  <p>Le code du modèle ne change pas.
+  Nous allons donc passer directement à la vue, c'est-à-dire la gestion de l'affichage de la page web.
+  Reportez-vous au précédent tutoriel pour voir le code du modèle.</p>
 
-<h4>La vue.</h4>
+  <h4>La vue.</h4>
 
-<p>Nous allons maintenant éditer le ficher <code>src/view.opa</code> pour définir la structure de la page.
-Cette structure a changé car nous voulons maintenant afficher les <em>snippets</em> crées directement dans la page web.</p>
+  <p>Nous allons maintenant éditer le ficher <code>src/view.opa</code> pour définir la structure de la page.
+  Cette structure a changé car nous voulons maintenant afficher les <em>snippets</em> crées directement dans la page web.</p>
 
 <div class="highlight"><pre><span class="nx">module</span> <span class="nx">View</span> <span class="p">{</span>
 
@@ -217,12 +217,12 @@ Nous récupérons le titre entré par l'appel à la fonction Dom.get_value() en 
 <h5>La mise à jour de la vue.</h5>
 
 <pre lang="javascipt"><code>function display_snippet(snippet) {
-  content =
-    &lt;li&gt;
-    &lt;h2&gt;{snippet.title} by {snippet.user}&lt;/h2&gt;&lt;br&gt;
-    &lt;div&gt;{Markdown.xhtml_of_string({detect_text_links: true}, snippet.code)}&lt;/div&gt;
-  &lt;/li&gt;;
-  Dom.transform([{jq : #snippet-list, subject : {content : content}, verb : {append}}])
+content =
+&lt;li&gt;
+&lt;h2&gt;{snippet.title} by {snippet.user}&lt;/h2&gt;&lt;br&gt;
+&lt;div&gt;{Markdown.xhtml_of_string({detect_text_links: true}, snippet.code)}&lt;/div&gt;
+&lt;/li&gt;;
+Dom.transform([{jq : #snippet-list, subject : {content : content}, verb : {append}}])
 }
 </code></pre>
 

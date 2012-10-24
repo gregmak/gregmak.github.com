@@ -25,20 +25,20 @@
     <li><a href="http://gregmak.github.com/rest.html">Création d'un web-service <strong>RESTful</strong>.</a></li>
     <li><a href="http://gregmak.github.com/dom.html">Manipulation du <strong>DOM</strong>.</a></li>
     <li><a href="http://gregmak.github.com/mongo.html">Persistance avec <strong>MongoDB</strong>.</a></li>
-    </ul>
-  </div>
+  </ul>
+</div>
 
 <!-- MAIN CONTENT -->
 <div id="main_content_wrap" class="outer">
   <section id="main_content" class="inner">
 
-<p>Nous allons voir dans ce tutoriel comment gérer la persistance en <strong>Opa</strong> via l'utilisation d'une base de données NoSQL : <strong>MongoDB</strong>.
-Pour ce faire nous allons reprendre l'application ecrite précédamment et nous allons la modifier pour que les <em>snippets</em> créés soient stockés dans une base de données plutôt qu'en RAM.</p>
+  <p>Nous allons voir dans ce tutoriel comment gérer la persistance en <strong>Opa</strong> via l'utilisation d'une base de données NoSQL : <strong>MongoDB</strong>.
+  Pour ce faire nous allons reprendre l'application ecrite précédamment et nous allons la modifier pour que les <em>snippets</em> créés soient stockés dans une base de données plutôt qu'en RAM.</p>
 
-<h4>Le modèle.</h4>
+  <h4>Le modèle.</h4>
 
-<p>Cette fois le code du modèle va changer par rapport à la première version de l'application.
-Nous y déclarons maintenant notre base de données, ainsi que toutes les fonctions de manipulation de <em>snippets</em>.</p>
+  <p>Cette fois le code du modèle va changer par rapport à la première version de l'application.
+  Nous y déclarons maintenant notre base de données, ainsi que toutes les fonctions de manipulation de <em>snippets</em>.</p>
 
 <div class="highlight"><pre><span class="nx">type</span> <span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span> <span class="o">=</span> <span class="p">{</span><span class="nx">option</span><span class="p">(</span><span class="kr">int</span><span class="p">)</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">title</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">string</span> <span class="nx">user</span><span class="p">}</span>
 
