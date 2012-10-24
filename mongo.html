@@ -116,7 +116,7 @@
 
 <p>Tous ces champs sauf l'identifiant sont des chaînes de caractères. L'identifiant est un entier optionel (c'est-à-dire qu'il peut ne pas être précisé).</p>
 
-<p>Uns fois le(s) type(s) de données définis, nous devons déclarer la structure de notre base de données.</p>
+<p>Une fois le(s) type(s) de données définis, nous devons déclarer la structure de notre base de données.</p>
 
 <div class="highlight"><pre><span class="nx">database</span> <span class="nx">test</span> <span class="p">{</span>
     <span class="nx">Snippet</span><span class="p">.</span><span class="nx">t</span> <span class="o">/</span><span class="nx">snippets</span><span class="p">[{</span><span class="nx">id</span><span class="p">}]</span> <span class="c1">// the set of snippets</span>
@@ -126,7 +126,6 @@
 <p>Nous venons de déclarer une base de données ayant pour nom <em>test</em> et ayant un seul chemin : <em>/snippets[{id}]</em> servant à stocker des données du type <em>Snippet.t</em>.
 Ici nous n'avons que des <em>snippets</em> à stocker, notre base peut dont se composer d'un chemin unique.
 Cette déclaration indique que l'on veut stocker un <em>set</em> de <em>snippets</em> avec le champ <em>id</em> comme clé primaire.
-Ces <em>snippets</em> seront donc récupérés dans la base de donneés par leur identifiant.</p>
 
 <p>Regardons plus en détail les fonctions de manipulation des <em>snippets</em>.</p>
 
@@ -145,12 +144,12 @@ Ces <em>snippets</em> seront donc récupérés dans la base de donneés par leur
     <span class="p">}</span>
 </pre></div>
 
-<p>Ces deux fonctions prennent en argument une continuation à appliquer unefois le ou les <em>snippet(s)</em> récupéré(s).</p>
+<p>Ces deux fonctions prennent en argument une continuation à appliquer une fois le(s) <em>snippet(s)</em> récupéré(s).</p>
 
 <p>La méthode pour récupérer tous les <em>snippets</em> va lire l'ensmble des <em>snippets</em> sur le chemin <em>/test/snippets</em> sous la forme d'un <em>DbSet</em>.
-Nous voulons manipuler ces <em>sniipets</em> sous forme de liste donc nous transformons notre <em>DbSet</em> en liste de <em>snippets</em> en passant par un <em>iterator</em>.</p>
+Nous voulons manipuler ces <em>snipets</em> sous forme de liste donc nous transformons notre <em>DbSet</em> en liste de <em>snippets</em> en passant par un <em>iterator</em>.</p>
 
-<p>La méthode pour récupérer un <em>snippet</em> particulier prend en plus l'identifiant du <em>snippet</em> rechercher.
+<p>La méthode pour récupérer un <em>snippet</em> particulier prend en plus l'identifiant du <em>snippet</em> recherché.
 Cette méthode va chercher dans l'ensemble des <em>snippets</em> et applique la continuation sur le <em>snippet</em> ayant l'identifiant recherché.</p>
 
 <h6>Attention !!!</h6>
