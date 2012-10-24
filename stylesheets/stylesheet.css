@@ -264,7 +264,7 @@ img {
 }
 
 .tutorials {
-  position: absolute;
+  position: fixed;
   top: 220px;
 }
 
