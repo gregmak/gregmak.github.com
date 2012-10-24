@@ -19,12 +19,35 @@
   </header>
 </div>
 
+
 <div class="tutorials">
   <ul>
     <li><a href="http://gregmak.github.com">Acceuil.</a></li>
+
     <li><a href="http://gregmak.github.com/rest.html">Création d'un web-service <strong>RESTful</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/rest.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#test">Les tests.</a></li>
+    </ul>
+
     <li><a href="http://gregmak.github.com/dom.html">Manipulation du <strong>DOM</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/dom.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#test">Les tests.</a></li>
+  </ul>
+
     <li><a href="http://gregmak.github.com/mongo.html">Persistance avec <strong>MongoDB</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/mongo.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#test">Les tests.</a></li>
+    </ul>
+
   </ul>
 </div>
 
@@ -77,6 +100,7 @@
 
 <p>Notez que ces déclarations peuvent aussi bien se faire en début de chaque fichier. Mais l'utilisation d'un fichier <code>opa.conf</code> a l'avantage de centraliser toutes les déclarations de ce type.</p>
 
+<a name="model"></a>
 <h4>Le modèle.</h4>
 
 <p>Une fois le squelette créé, nous commençons par modifier le fichier <code>src/model.opa</code> pour y inclure la définition d'un <em>snippet</em> et les traitements associés.</p>
@@ -146,6 +170,7 @@
 
 <p>La seule particularité est l'utilisation du <strong>UserContext</strong>. Ce module, appartenant à la librairie standard d'<strong>Opa</strong>, est un des moyens offerts par <strong>Opa</strong> permettant la création et la manipulation d'éléments mutables.</p>
 
+<a name="view"></a>
 <h4>La vue.</h4>
 
 <p>Nous allons maintenant éditer le ficher <code>src/view.opa</code> pour définir la structure de la page.</p>
@@ -176,6 +201,7 @@
 
 <p>Notez ici que vous pouvez écrire directement du code HTML dans du code <strong>Opa</strong>. La création de pages web en <strong>Opa</strong> n'etant pas le sujet de ce tutoriel, nous nous contenterons d'une simple page vierge suffisante au bon déroulement de notre application. Il faut juste penser à créer les premiers <em>snippets</em> au chargement de la page.</p>
 
+<a name="controler"></a>
 <h4>Le contrôleur.</h4>
 
 <p>Il nous reste maintenant à gérer la définition du serveur, le dispatcheur (ou routeur) et le traitements des requêtes <strong>REST</strong>.
@@ -397,6 +423,7 @@ Cela se fait dans le fichier <code>src/controller.opa</code>, que nous allons é
 
 <p>A partir de la chaîne de caractères, on construit un objet de type <em>RPC.Json.json</em> grâce à la fonction <strong>OpaSerialize.partial_unserialize</strong>. Il nous reste à décoder cet objet grâce à la fonction <strong>OpaSerialize.Json.unserialize_unsorted</strong> (<em>unsorted</em> car les champs dans la requête ne sont pas triés). Nous obtenons alors directement un objet du type <em>Snippet.t</em> que nous pouvons donc sauvegarder.</p>
 
+<a name="test"></a>
 <h4>Testons cette application.</h4>
 
 <p>Nous avons donc terminé notre petite application, c'est le moment de la tester.

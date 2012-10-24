@@ -22,9 +22,31 @@
 <div class="tutorials">
   <ul>
     <li><a href="http://gregmak.github.com">Acceuil.</a></li>
+
     <li><a href="http://gregmak.github.com/rest.html">Création d'un web-service <strong>RESTful</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/rest.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#test">Les tests.</a></li>
+    </ul>
+
     <li><a href="http://gregmak.github.com/dom.html">Manipulation du <strong>DOM</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/dom.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#test">Les tests.</a></li>
+    </ul>
+
     <li><a href="http://gregmak.github.com/mongo.html">Persistance avec <strong>MongoDB</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/mongo.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#test">Les tests.</a></li>
+    </ul>
+
   </ul>
 </div>
 
@@ -35,6 +57,7 @@
   <p>Nous allons voir dans ce tutoriel comment gérer la persistance en <strong>Opa</strong> via l'utilisation d'une base de données NoSQL : <strong>MongoDB</strong>.
   Pour ce faire nous allons reprendre l'application ecrite précédamment et nous allons la modifier pour que les <em>snippets</em> créés soient stockés dans une base de données plutôt qu'en RAM.</p>
 
+  <a name="model"></a>
   <h4>Le modèle.</h4>
 
   <p>Cette fois le code du modèle va changer par rapport à la première version de l'application.
@@ -250,6 +273,7 @@ Dans le cas contraire, la base est déjà remplie de quelques <em>snippets</em> 
     <span class="p">}</span>
 </pre></div>
 
+<a name="view"></a>
 <h4>La vue.</h4>
 
 <div class="highlight"><pre><span class="nx">module</span> <span class="nx">View</span> <span class="p">{</span>
@@ -480,6 +504,7 @@ Si le titre du <em>snippet</em> n'est pas vide, nous appelons la fonction d'affi
 La différence réside dans le traitement effectué une fois l'action faite du côté du modèle.
 Dans le cas de la suppression, nous affichons toujours un message à l'utilisateur pour lui indiquer si la suppression a bien été réalisée ou non.</p>
 
+<a name="controler"></a>
 <h4>Le controlleur.</h4>
 
 <div class="highlight"><pre><span class="nx">module</span> <span class="nx">Controller</span> <span class="p">{</span>
@@ -508,6 +533,7 @@ Dans le cas de la suppression, nous affichons toujours un message à l'utilisate
 
 <p>Le code du controlleur ressemble fortement à celui de la précédente version. Nous lui ajoutons juste le chargement du fichier .css dans lequel nous avons défini le style pour quelques éléments de notre page.</p>
 
+<a name="test"></a>
 <h4>Testons cette application.</h4>
 
 <p>Une fois l'application compliée et lancée, ouvrez votre navigateur à l'adresse <code>localhost:8080</code> qui est l'adresse par défaut.

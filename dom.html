@@ -22,9 +22,31 @@
 <div class="tutorials">
   <ul>
     <li><a href="http://gregmak.github.com">Acceuil.</a></li>
+
     <li><a href="http://gregmak.github.com/rest.html">Création d'un web-service <strong>RESTful</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/rest.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/rest.html#test">Les tests.</a></li>
+    </ul>
+
     <li><a href="http://gregmak.github.com/dom.html">Manipulation du <strong>DOM</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/dom.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/dom.html#test">Les tests.</a></li>
+    </ul>
+
     <li><a href="http://gregmak.github.com/mongo.html">Persistance avec <strong>MongoDB</strong>.</a></li>
+    <ul>
+      <li><a href="http://gregmak.github.com/mongo.html#model">Le modèle.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#view">La vue.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#controler">Le controlleur.</a></li>
+      <li><a href="http://gregmak.github.com/mongo.html#test">Les tests.</a></li>
+    </ul>
+
   </ul>
 </div>
 
@@ -41,12 +63,14 @@
     <li>que les <em>snippets</em> soient affichés dans la page web plutôt que dans la console du navigateur.</li>
   </ol><p>Nous avons donc besoin d'une part d'un formulaire et d'autre part d'afficher une liste de <em>snippets</em> qui va se mettre à jour au fur et à mesure des créations de <em>snippets</em>.</p>
 
+  <a name="model"></a>
   <h4>Le modèle.</h4>
 
   <p>Le code du modèle ne change pas.
   Nous allons donc passer directement à la vue, c'est-à-dire la gestion de l'affichage de la page web.
   Reportez-vous au précédent tutoriel pour voir le code du modèle.</p>
 
+  <a name="view"></a>
   <h4>La vue.</h4>
 
   <p>Nous allons maintenant éditer le ficher <code>src/view.opa</code> pour définir la structure de la page.
@@ -262,7 +286,7 @@ Cela ne permet pas en revanche de s'affranchir d'un contrôle plus rigoureux des
 
 <p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v2/snippets_v2_error_server.png?raw=true" alt="snippets_v2_error_server.png"></p>
 
-
+<a name="controler"></a>
 <h4>Le controlleur.</h4>
 
 <p>Dans cette version le code du controlleur est beaucoup plus simple et court car nous n'avons plus besoin des traiter des requêtes <strong>REST</strong>.
@@ -280,6 +304,7 @@ Un simple parser d'URL permet de faire tourner notre application (nous n'avons q
 <span class="nx">Server</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">Server</span><span class="p">.</span><span class="nx">http</span><span class="p">,</span> <span class="p">{</span><span class="nx">custom</span> <span class="o">:</span> <span class="nx">Controller</span><span class="p">.</span><span class="nx">dispatcher</span><span class="p">})</span>
 </pre></div>
 
+<a name="test"></a>
 <h4>Testons cette application.</h4>
 
 <p>Une fois l'application compilée et lancée, ouvrez votre navigateur à l'adresse indiquée.
