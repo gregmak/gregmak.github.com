@@ -1,0 +1,558 @@
+<h2>Persistence with MongoDB.</h2>
+
+<p>We will see in this tutorial how to manage persistence in <strong>Opa</strong> through the use of a NoSQL database : <strong>MongoDB</strong>.
+We will start from the small application previously written and we will modify it so that the created <em>snippets</em> are stored in a database rather than in RAM.</p>
+
+<h4>The model.</h4>
+
+<p>This time the code of the model has changed compared to the first version.
+We have to declare our database, and all the functions needed to manipulate <em>snippets</em> through this database.</p>
+
+<p>```javascript
+type Snippet.t = {option(int) id, string title, string code, string user}</p>
+
+<p>database test {
+    Snippet.t /snippets[{id}] // the set of snippets
+}</p>
+
+<p>module Model {</p>
+
+<pre><code>function make_snippet(title, code, user) {
+{id: {none}, ~title, ~code, ~user}
+}
+
+function save_snippet(snippet, callback) {
+match (snippet.id) {
+case {some : _}:
+    /test/snippets[{id : snippet.id}] &lt;- snippet;
+    // applying the callback onto the given snippet
+    callback(snippet);
+default: // new snippet
+    size = Iter.count(DbSet.iterator(/test/snippets));
+    id = {some : size + 1};
+    snippet = {snippet with ~id};
+    /test/snippets[{id: id}] &lt;- snippet;
+    // applying the callback onto the updated snippet
+    callback(snippet);
+}
+}
+
+function find_all(callback) {
+it = DbSet.iterator(/test/snippets);
+snippets = Iter.to_list(it);
+callback(snippets);
+}
+
+function find_by_id(id) {
+    /test/snippets[{id: {some: id}}];
+}
+
+function delete_snippet(id, callback) {
+snippet = find_by_id(id);
+Db.remove(@/test/snippets[{id: snippet.id}]);
+// applying the callback onto the found snippet
+callback(snippet);
+}
+
+function initialize(callback) {
+function callback(snippet) {
+    callback(snippet, {append});
+}
+find_all(function(snippets) {
+    if (List.is_empty(snippets)) {
+    snippet_one = make_snippet("essai 1","//FOO","gregmak");
+    snippet_two = make_snippet("essai 2","//Hello World","gregmak");
+    snippet_three = make_snippet("essai 3","//Me again !","gregmak");
+    save_snippet(snippet_one, callback);
+    save_snippet(snippet_two, callback);
+    save_snippet(snippet_three, callback);
+    } else {
+    List.iter(function(snippet) {
+        callback(snippet);
+    }, snippets)
+    }
+})
+}
+</code></pre>
+
+<p>}</p>
+
+<p>````</p>
+
+<p>This code begins with the declaration of the type of a <em>snippet</em>. We see that a <em>snippet</em> is comopsed by an identifier, a title, a code and the name of the creator.</p>
+
+<p><code>javascript
+type Snippet.t = {option(int) id, string title, string code, string user}
+</code></p>
+
+<p>All these fields exept the identifier are string. The identifier is an optional integer (which means that it can be omitted).</p>
+
+<p>Once the data type(s) defined, we have to declare the structure of our databse.</p>
+
+<p><code>javascript
+database test {
+    Snippet.t /snippets[{id}] // the set of snippets
+}
+</code></p>
+
+<p>We have just declared a database with <em>test</em> as name and composed by a unique path : <em>/snippets[{id}]</em> used to store datas of the type <em>Snippet.t</em>.
+This declaration means that we want to store <em>snippets</em> as a set with the field <em>id</em> as primary key.</p>
+
+<p>Let us have a closer look on the functions used to maniulate the <em>snippets</em></p>
+
+<h5>The <em>snippets</em> search.</h5>
+
+<p>We define here a method to get all the <em>snippets</em> contained in the database and a method to get a <em>snippet</em> from its identifier.</p>
+
+<p>````javascript
+    function find<em>all(callback) {
+    it = DbSet.iterator(/test/snippets);
+    snippets = Iter.to</em>list(it);
+    callback(snippets);
+    }</p>
+
+<pre><code>function find_by_id(id) {
+    /test/snippets[{id: {some: id}}];
+}
+</code></pre>
+
+<p>````</p>
+
+<p>These two functions take as argument the callback to apply one the recovered <em>snippet(s)</em>.</p>
+
+<p>The method to get all the <em>snippets</em> reads the whole set of <em>snippets</em> on the path <em>test/snippets</em>as a <em>DbSet</em>.
+We want to be able to manipulate these <em>snippets</em> as a list, so we need to transform the DbSet into a list of <em>snippets</em>, what we do through the use of an iterator.</p>
+
+<p>The method to get a particular <em>snippet</em> takes beside the id of the wanted <em>snippet</em>.
+This method looks in the set of <em>snippets</em> and applyies the callback on the recovered <em>snippet</em>.</p>
+
+<h6>Beware !!!</h6>
+
+<p>Each path of a database declaration is associated with a default value.
+If there is no data stored on the given path, the default value associated with this path is returned.
+This is why a database read on a valid path always return a result.
+We will see that point in the part of this tutorial dedicated to the view.</p>
+
+<h5>The <em>snippets</em> saving.</h5>
+
+<p><code>javascript
+    function save_snippet(snippet, callback) {
+    match (snippet.id) {
+    case {some : _}:
+        /test/snippets[{id : snippet.id}] &lt;- snippet;
+        // applying the callback onto the given snippet
+        callback(snippet);
+    default: // new snippet
+        size = Iter.count(DbSet.iterator(/test/snippets));
+        id = {some : size + 1};
+        snippet = {snippet with ~id};
+        /test/snippets[{id: id}] &lt;- snippet;
+        // applying the callback onto the updated snippet
+        callback(snippet);
+    }
+    }
+</code></p>
+
+<p>As previously written, the <em>snippets</em> will be recorded in the database with their identifier as primary key.
+The identifier of a <em>snippet</em> is an optional integer (which means that it can be omitted as it is during a new <em>snippet</em> creation).
+So we need to handle both of these cases when saving a <em>snippet</em> :</p>
+
+<ol>
+<li>The case where the identifier has a value (saving an existing <em>snippet</em>).</li>
+<li>The case where the identifier has no value (saving a new <em>snippet</em>).</li>
+</ol>
+
+<p>Hence we perform a pattern-matching on the identifier of the <em>snippet</em> to save.</p>
+
+<p>In the case where the identifier has a value, we just have to overwrite the stored <em>snippet</em> by the new one and apply the callback on it :</p>
+
+<p><code>javascript
+    /test/snippets[{id : snippet.id}] &lt;- snippet;
+    callback(snippet);
+</code></p>
+
+<p>This declaration means that we want to store the value <em>snippet</em> at the path <em>/tests/snippets[{id: snippet.id}]</em>.
+If a previous <em>snippet</em> were already stored at this path then it would be overwritten. Otherwise, we have simply added a new value to the database.</p>
+
+<p>In the case where the identifier has no value, we have to create a new one and assign it to the <em>snippet</em> to save.
+For that we need to know the number of <em>snippets</em> currently contained in the database. Once again this will be done through the use of an iterator.</p>
+
+<p><code>javascript
+        size = Iter.count(DbSet.iterator(/test/snippets));
+</code></p>
+
+<p>Once the number of <em>snippets</em> known, we can create the new id by taking the next integer following this numberand so we can be sure that each <em>snippet</em> contained in the database is going to have a unique id.</p>
+
+<p><code>javascript
+        id = {some : size + 1};
+</code></p>
+
+<p>We just have now to assign this new id to our new <em>snippet</em> and record this <em>snippet</em> in the databse with the new id as primary key, and apply the callback on it.</p>
+
+<p><code>javascript
+    snippet = {snippet with ~id};
+    /test/snippets[{id: id}] &lt;- snippet;
+    callback(snippet);
+</code></p>
+
+<h5>The <em>snippets</em> deletion.</h5>
+
+<p><code>javascript
+    function delete_snippet(id, callback) {
+    if (Db.exists(@/test/snippets[{id: {some: id}}])) {
+        Db.remove(@/test/snippets[{id: {some: id}}]);
+        callback({ok});
+    } else {
+        callback({ko});
+    }
+    }
+</code></p>
+
+<p>The deletion of a <em>snippet</em> is not very complex.
+We have to test if the <em>snippet</em> with the giving id exists in the database.
+If it exists, we delete it and apply the callback on the value {ok}. If not, we apply the callback on the value {ko}.
+We will see what to do with such values later on.</p>
+
+<h5>Initialization.</h5>
+
+<p>At the start of the server, we check the content of the database by a call to the function <strong>find_all</strong>.
+If the returned list is empty, we create 3 new <em>snippets</em> to fill the database and we display them.
+Otherwise, the database is already filled with some <em>snippets</em> that we display.</p>
+
+<p><code>javascript
+    function initialize(callback) {
+    function callback(snippet) {
+        callback(snippet, {append});
+    }
+    find_all(function(snippets) {
+        if (List.is_empty(snippets)) {
+        snippet_one = make_snippet("essai 1","//FOO","gregmak");
+        snippet_two = make_snippet("essai 2","//Hello World","gregmak");
+        snippet_three = make_snippet("essai 3","//Me again !","gregmak");
+        save_snippet(snippet_one, callback);
+        save_snippet(snippet_two, callback);
+        save_snippet(snippet_three, callback);
+        } else {
+        List.iter(function(snippet) {
+            callback(snippet);
+        }, snippets)
+        }
+    })
+    }
+</code></p>
+
+<h4>The view.</h4>
+
+<p>````javascript
+module View {</p>
+
+<pre><code>function initialize() {
+Model.initialize(display_snippet);
+}
+
+function display_snippet(snippet, verb) {
+content =
+    &lt;li&gt;
+        &lt;h2&gt;{snippet.title} by {snippet.user}&lt;/h2&gt;&lt;br&gt;
+    &lt;div&gt;{Xhtml.of_string_unsafe(snippet.code)}&lt;/div&gt;
+    &lt;/li&gt;;
+Dom.transform([{jq : #snippet-list, subject : {content : content}, ~verb}])
+}
+
+function add_snippet() {
+title = Dom.get_value(#title);
+code = Dom.get_value(#code)
+    |&gt; Markdown.xhtml_of_string({detect_text_links: true}, _)
+    |&gt; Xhtml.to_string(_);
+user = Dom.get_value(#user);
+if (title == "" || code == "" || user == "") {
+    message = {alert : {title : "Erreur", description : &lt;&gt; All fields are mandatory. Please fill them all. &lt;/&gt;}, closable : true};
+    alert = WBootstrap.Alert.make(message, {error});
+    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+} else {
+    snippet = Model.make_snippet(title, code, user);
+    Model.save_snippet(snippet, function(snippet) {
+    Dom.clear_value(#title);
+    Dom.clear_value(#code);
+    Dom.clear_value(#user);
+    display_snippet(snippet, {append});
+    });
+}
+}
+
+function show_all() {
+Model.find_all(function(snippets) {
+    List.iteri(function(i, snippet) {
+    if (i == 0) {
+        display_snippet(snippet, {set});
+    } else {
+        display_snippet(snippet, {append});
+    }
+    }, snippets)
+})
+}
+
+function show_snippet() {
+id = Dom.get_value(#snippet_id_show) |&gt; Int.of_string(_)
+snippet = Model.find_by_id(id);
+if (snippet.title == "") {
+    message = {alert : {title : "Error", description : &lt;&gt; Snippet of id {id} does not exist. &lt;/&gt;}, closable : true};
+    alert = WBootstrap.Alert.make(message, {success});
+    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+    Dom.clear_value(#snippet_id_show);
+} else {
+    display_snippet(snippet, {set});
+    Dom.clear_value(#snippet_id_show);
+}
+}
+
+function delete_snippet() {
+id = Dom.get_value(#snippet_id_delete) |&gt; Int.of_string(_)
+Model.delete_snippet(id, function(result) {
+    match (result) {
+    case {ok} :
+    message = {alert : {title : "OK", description : &lt;&gt; Snippet of id {id} has been removed. &lt;/&gt;}, closable : true};
+    alert = WBootstrap.Alert.make(message, {success});
+    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+    Dom.clear_value(#snippet_id_delete);
+    case {ko} :
+    message = {alert : {title : "Error", description : &lt;&gt; Snippet of id {id} does not exist. &lt;/&gt;}, closable : true};
+    alert = WBootstrap.Alert.make(message, {success});
+    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+    Dom.clear_value(#snippet_id_delete);
+    }
+})
+}
+
+function simple_main_page() {
+title_bar =
+    &lt;&gt;
+    &lt;div class="navbar navbar-fixed-top"&gt;
+    &lt;div class="navbar-inner"&gt;
+        &lt;div class="container"&gt;
+        &lt;a class="brand" href="#"&gt;
+    &lt;&gt;OPA&lt;/&gt;
+    &lt;/a&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;/&gt;;
+form =
+    &lt;&gt;
+    &lt;div id="snippet-form" style="margin-top:50px;"&gt;
+        &lt;h2&gt;Go ...&lt;/h2&gt;
+    &lt;form method="post" action="javascript:void(0);" class="well"&gt;
+        &lt;label&gt;Title : &lt;/label&gt;
+        &lt;input id="title" type="text" class="span3" placeholder="title"/&gt;
+        &lt;label&gt;Code Snippet : (with markdown) &lt;/label&gt;
+        &lt;textarea id="code" placeholder="code" rows="5"&gt;&lt;/textarea&gt;
+        &lt;label&gt;User : &lt;/label&gt;
+        &lt;input id="user" type="text" placeholder="user"/&gt;
+        &lt;button type="submit" class="btn" onclick={function(_) {add_snippet()}}&gt;Add a Snippet&lt;/button&gt;
+    &lt;/form&gt;
+    &lt;/div&gt;
+    &lt;/&gt;;
+boutons =
+    &lt;&gt;
+    &lt;div&gt;&lt;button type="submit"  class="btn" onclick={function(_) {show_all()}}&gt;Show all snippets&lt;/button&gt;&lt;/div&gt;
+    &lt;div&gt;
+    &lt;button type="submit"  class="btn" onclick={function(_) {show_snippet()}}&gt;Show snippet of id&lt;/button&gt;
+    &lt;input id="snippet_id_show" class="snippet-id" type="text" placeholder="id"/&gt;
+    &lt;/div&gt;
+    &lt;div&gt;
+    &lt;button type="submit"  class="btn" onclick={function(_) {delete_snippet()}}&gt;Delete snippet of id&lt;/button&gt;
+    &lt;input id="snippet_id_delete" class="snippet-id" type="text" placeholder="id"/&gt;
+    &lt;/div&gt;
+    &lt;/&gt;;
+content =
+    &lt;div onready={function(_) {initialize()}}&gt;
+    {title_bar}
+    &lt;div class="container"&gt;
+    &lt;div&gt;{form}&lt;/div&gt;
+    &lt;div&gt;{boutons}&lt;/div&gt;
+    &lt;ul id="snippet-list" style="list-style: none;"&gt;
+    &lt;li data-template&gt;
+        &lt;hr&gt;
+    &lt;/li&gt;
+    &lt;/ul&gt;
+    &lt;/div&gt;
+    &lt;div id="notifications"&gt;
+    &lt;/div&gt;
+    &lt;/div&gt;;
+Resource.page("StyKKeKode in OPA", content)
+}
+</code></pre>
+
+<p>}
+````</p>
+
+<p>The view has some tiny changes compare to the previous version on DOM manipulation.
+It contains some additional functions that we are going to detail.</p>
+
+<h5>Display all the <em>snippets</em>.</h5>
+
+<p><code>javascript
+    function show_all() {
+    Model.find_all(function(snippets) {
+        List.iteri(function(i, snippet) {
+        if (i == 0) {
+            display_snippet(snippet, {set});
+        } else {
+            display_snippet(snippet, {append});
+        }
+        }, snippets)
+    })
+    }
+</code></p>
+
+<p>We recover the list of all the <em>snippets</em> contained in the database by a call to the function <strong>find<em>all</strong> and for each *snippet* we call the function <strong>display</em>snippet</strong>.
+For the first <em>snippet</em> to display, we give the value {set} to the function <strong>display<em>snippet</strong> so that this display must overwrite the pervious display.
+Thereafter we use the value {append} to tell the function <strong>display</em>snippet</strong> that the following displays will be added to the first one.</p>
+
+<h5>Display a particular <em>snippet</em>.</h5>
+
+<p><code>javascript
+    function show_snippet() {
+    id = Dom.get_value(#snippet_id_show) |&gt; Int.of_string(_)
+    snippet = Model.find_by_id(id);
+    if (snippet.title == "") {
+        message = {alert : {title : "Error", description : &lt;&gt; Snippet of id {id} does not exist. &lt;/&gt;}, closable : true};
+        alert = WBootstrap.Alert.make(message, {success});
+        Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+        Dom.clear_value(#snippet_id_show);
+    } else {
+        display_snippet(snippet, {set});
+        Dom.clear_value(#snippet_id_show);
+    }
+    }
+</code></p>
+
+<p>To display a particular <em>snippet</em>, we need to get its identifier given by the user in the field <em>snippet_id_show</em> (please refer to the previous tutorial for moer details about the DOM manipulation).
+Once this id recovered wa call the function <strong>find<em>by</em>id</strong> from the model and we apply a particular treatment according to the returned value.</p>
+
+<p>We have previously precised that any read on a valid path of a database declaration will always return a result (default value if no value is written on this path).
+So we need to check to content of the returned value to make sure that this is not the default value, but a real <em>snippet</em> found on the given path.
+We perform this check on the field <em>title</em> to be sure it is not an empty string as it would be for the default value.
+If the title is not empty, we call the function <strong>display_snippet</strong> with the value {set} to overwrite the pervious display.</p>
+
+<p><code>javascript
+        display_snippet(snippet, {set});
+</code></p>
+
+<p>If the title is an empty string; we display an error message to tell the user that the <em>snippet</em> he was looking for has not been found.</p>
+
+<p><code>javascript
+        message = {alert : {title : "Error", description : &lt;&gt; Snippet of id {id} does not exist. &lt;/&gt;}, closable : true};
+        alert = WBootstrap.Alert.make(message, {success});
+        Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+</code></p>
+
+<p>In every cases, we clean the form from the value read in the field <em>snippet_id_show</em> :</p>
+
+<p><code>javascript
+        Dom.clear_value(#snippet_id_show);
+</code></p>
+
+<h5>Delete a particular <em>snippet</em>.</h5>
+
+<p><code>javascript
+    function delete_snippet() {
+    id = Dom.get_value(#snippet_id_delete) |&gt; Int.of_string(_)
+    Model.delete_snippet(id, function(result) {
+        match (result) {
+        case {ok} :
+        message = {alert : {title : "OK", description : &lt;&gt; Snippet of id {id} has been removed. &lt;/&gt;}, closable : true};
+        alert = WBootstrap.Alert.make(message, {success});
+        Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+        Dom.clear_value(#snippet_id_delete);
+        case {ko} :
+        message = {alert : {title : "Error", description : &lt;&gt; Snippet of id {id} does not exist. &lt;/&gt;}, closable : true};
+        alert = WBootstrap.Alert.make(message, {success});
+        Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+        Dom.clear_value(#snippet_id_delete);
+        }
+    })
+    }
+</code></p>
+
+<p>The same way we display a particular <em>snippet</em>, we can ask for a deletion.
+Again, if the <em>snippet</em> to be removed does not exists in the database, we display an error message to the user. Otherwise we perform the deletion and apply the callback.</p>
+
+<h4>The controler.</h4>
+
+<p>````javascript
+module Controller {</p>
+
+<pre><code>dispatcher = parser {
+        | "/" -&gt; View.simple_main_page()
+        | (.*) -&gt; Resource.page("Hello", &lt;&gt;&lt;h2&gt;"404 NOT FOUND!"&lt;/h2&gt;&lt;/&gt;)
+}
+</code></pre>
+
+<p>}</p>
+
+<p>resources = @static<em>resource</em>directory("resources")</p>
+
+<p>Server.start(Server.http, [
+  { register:
+    [ { doctype: { html5 } },
+      { js: [ ] },
+      { css: [ "/resources/css/style.css"] }
+    ]
+  },
+  { ~resources },
+  { custom: Controller.dispatcher }
+])</p>
+
+<p>````</p>
+
+<p>The code of the controler is quite similar to the one of the previous version.
+We have added the loading of the file <em>style.css</em> in which we have defined the style for some elements in our page.</p>
+
+<h4>Let us test this application.</h4>
+
+<p>Once the application compiled and running, open your browser at the address <code>localhost:8080</code> which is the default address.
+We can see that the page already displays the 3 <em>snippets</em> we have created at the start of the server.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_1.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>We can now create a new snippet.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_2.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>Click on the button 'Add a snippet'.
+The page now displays the 4 <em>snippets</em> contained in the database.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_3.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>Let's now test the display of a particular <em>snippet</em>.
+Enter "3" in the input field after the button 'Show snippet of id', and validate either by clicking on that button or press 'Enter'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_4.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>We can see that only the <em>snippet</em> with the identifier "3" is displayed.</p>
+
+<p>Let's now test the deletion of a <em>snippet</em>.
+Enter "4" in the input field after the button 'Delete snippet of id', and validate either by clicking on that button or press 'Enter'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_5.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>A message confirms that the deletion has been done.
+Let's check that.
+Let's ask to display only the <em>snippet</em> of identifier "4", which is the <em>snippet</em> we have just deleted.
+Enter "4" in the input field after the button 'Show snippet of id', and validate either by clicking on that button or press 'Enter'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_6.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>We can see that a message tells us that the <em>snippet</em> we are looking for does not exists.</p>
+
+<p>Let us now ask for the display of all the <em>snippets</em> contained in the database.
+Click on the button 'Show all snippets'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/v3/snippets_v3_7.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>We can see only 3 <em>snippets</em> displayed. The <em>snippet</em> of identifier "4" has been deleted from the database.</p>
+
+<h4>Conclusion.</h4>
+
+<p>We have seen how to handle persistence in <em>Opa</em> through the use of a NoSQL database : MongoDB.</p>

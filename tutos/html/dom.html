@@ -1,0 +1,283 @@
+<h2>DOM manipulation.</h2>
+
+<p>In this tutorial we will see how to manipulate the DOM in <strong>Opa</strong>.
+For that we are going to modify the application we wrote for the previous tutorial, for :</p>
+
+<ol>
+<li>allow the user to create his <em>snippets</em> through a form rather than from <strong>REST</strong> requests.</li>
+<li>the <em>snippets</em> to be displayed in the web page rather than in the browser console.</li>
+</ol>
+
+<h4>The model.</h4>
+
+<p>The code of the model doesn't change from previous version (refer to the previous tutorial if you want to see the code of the model).
+So we will skip directly to the view, or how to handle the web page display.</p>
+
+<h4>The view.</h4>
+
+<p>We will now edit the file <code>src.view.opa</code> to define the web page structure.
+This structure has changed since we now want to display the <em>snippets</em> within the page.</p>
+
+<p>```javascript
+module View {</p>
+
+<pre><code>function initialize() {
+snippet_one = Model.make_snippet("essai 1","//FOO","gregmak");
+snippet_two = Model.make_snippet("essai 2","//Hello World","gregmak");
+snippet_three = Model.make_snippet("essai 3","//Me again !","gregmak");
+
+function foo(snippet) {
+    display_snippet(snippet);
+};
+
+Model.save_snippet(snippet_one, foo);
+Model.save_snippet(snippet_two, foo);
+Model.save_snippet(snippet_three, foo);
+
+}
+
+function display_snippet(snippet) {
+content =
+    &lt;li&gt;
+        &lt;h2&gt;{snippet.title} by {snippet.user}&lt;/h2&gt;&lt;br&gt;
+    &lt;div&gt;{Markdown.xhtml_of_string({detect_text_links: true}, snippet.code)}&lt;/div&gt;
+    &lt;/li&gt;;
+Dom.transform([{jq : #snippet-list, subject : {content : content}, verb : {append}}])
+}
+
+function add_snippet() {
+title = Dom.get_value(#title);
+code = Dom.get_value(#code)
+user = Dom.get_value(#user);
+if (title == "" || code == "" || user == "") {
+    message = {alert : {title : "Error", description : &lt;&gt; All fields are mandatory. Please fill them all. &lt;/&gt;}, closable : true};
+    alert = WBootstrap.Alert.make(message, {error});
+    Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+} else {
+    snippet = Model.make_snippet(title, code, user);
+    Model.save_snippet(snippet, function(snippet) {
+    Dom.clear_value(#title);
+    Dom.clear_value(#code);
+    Dom.clear_value(#user);
+    display_snippet(snippet);
+    });
+}
+}
+
+function simple_main_page() {
+title_bar =
+    &lt;&gt;
+    &lt;div class="navbar navbar-fixed-top"&gt;
+    &lt;div class="navbar-inner"&gt;
+        &lt;div class="container"&gt;
+        &lt;a class="brand" href="#"&gt;
+    &lt;&gt;OPA&lt;/&gt;
+    &lt;/a&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;/&gt;;
+form =
+    &lt;&gt;
+    &lt;div id="snippet-form" style="margin-top:50px;"&gt;
+        &lt;h2&gt;Go ...&lt;/h2&gt;
+    &lt;form method="post" action="javascript:void(0);" class="well"&gt;
+        &lt;label&gt;Title : &lt;/label&gt;
+        &lt;input id="title" type="text" class="span3" placeholder="title"/&gt;
+        &lt;label&gt;Code Snippet : (with markdown) &lt;/label&gt;
+        &lt;textarea id="code" placeholder="code" style="width:100%" rows="5"&gt;&lt;/textarea&gt;
+        &lt;label&gt;User : &lt;/label&gt;
+        &lt;input id="user" type="text" placeholder="user"/&gt;
+        &lt;button type="submit" class="btn" onclick={function(_) {add_snippet()}}&gt;Add a Snippet&lt;/button&gt;
+    &lt;/form&gt;
+    &lt;/div&gt;
+    &lt;/&gt;;
+content =
+    &lt;div onready={function(_) {initialize()}}&gt;
+    {title_bar}
+    &lt;div class="container"&gt;
+    &lt;div&gt;{form}&lt;/div&gt;
+    &lt;ul id="snippet-list" style="list-style: none;"&gt;
+    &lt;li data-template&gt;
+        &lt;hr&gt;
+    &lt;/li&gt;
+    &lt;/ul&gt;
+    &lt;/div&gt;
+    &lt;div id="notifications"&gt;
+    &lt;/div&gt;
+    &lt;/div&gt;;
+Resource.page("StyKKeKode in OPA", content)
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<h5>The web page structure.</h5>
+
+<p>We can see the the page is now composed of a title bar, a form to create the <em>snippets</em> and a place to display them.</p>
+
+<p>The title bar is used to give the page a rendering and to display a permanent link to one of the page of the application (for instance the home page).</p>
+
+<p>The form creation is quite easy if you are familiar with HTML forms.
+We need to precise the method used to send datas to the server : <strong>get</strong> or <strong>post</strong> (since this tutorial is not about the differences between these two methods we will not see them in details here).
+We need three input fields (for the <em>snippet</em> title and code and for the user name), and a button to submit the form and send datats to the server.
+The <em>snippet</em> title and the user name will be written in two simple <strong>input</strong> and the <em>snippet</em> code in a <strong>textarea</strong>.
+To the submission button we associate the method <strong>add_snippet</strong> which will read datas in the form fields and send them back to the server so that it can create a new <em>snippet</em>.</p>
+
+<p>Let us have a closer look to this function.</p>
+
+<h5>Datas reading.</h5>
+
+<p><code>javascript
+    function add_snippet() {
+    title = Dom.get_value(#title);
+    code = Dom.get_value(#code)
+    user = Dom.get_value(#user);
+    if (title == "" || code == "" || user == "") {
+        message = {alert : {title : "Error", description : &lt;&gt; All fields are mandatory. Please fill them all. &lt;/&gt;}, closable : true};
+        alert = WBootstrap.Alert.make(message, {error});
+        Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+    } else {
+        snippet = Model.make_snippet(title, code, user);
+        Model.save_snippet(snippet, function(snippet) {
+        Dom.clear_value(#title);
+        Dom.clear_value(#code);
+        Dom.clear_value(#user);
+        display_snippet(snippet);
+        });
+    }
+    }
+</code></p>
+
+<p>DOM manipulation is made in <strong>Opa</strong> with functions from the Dom module from the standard library.
+Reading datas from an element of the web page is done throught the method <strong>Dom.get_value</strong> which takes as argument an element f the web page and returns a string.
+In this exemple we will use ids to identify the wanted elements.
+This is not the only way to do this (even not the best in the way that implies to handle ids carefully to avoid any duplication).</p>
+
+<p>Let us take the <em>snippet</em> title as an exmple.</p>
+
+<p>In the form structure wa have defined the input field this way :
+<code>javascript
+&lt;input id="title" type="text" class="span3" placeholder="title"/&gt;
+</code></p>
+
+<p>Wa gave him the id  <em>title</em> : <code>id="title"</code>.</p>
+
+<p>We can now read the title given by the user throught a call to the function <strong>Dom.get_value</strong> with the field of id <em>title</em> as argument :
+<code>javascript
+title = Dom.get_value(#title)
+</code>
+(similary to JQuery, the synatx <em>#id</em> refers to the element if id <em>id</em> within the web page if it exists).</p>
+
+<p>Once all the needed datas recoveried, we can send them to the server for it to create a new <em>snippet</em>, and then clean all the form fields and update the view so that it is synchronized with the model.</p>
+
+<p><code>javascript
+        snippet = Model.make_snippet(title, code, user);
+        Model.save_snippet(snippet, function(snippet) {
+        Dom.clear_value(#title);
+        Dom.clear_value(#code);
+        Dom.clear_value(#user);
+        display_snippet(snippet);
+        });
+</code></p>
+
+<p>The update of the <em>snippets</em> list display is maid throught the call to the function <strong>dispay_snippet</strong> with the new <em>snippet</em> to display given as argument.</p>
+
+<p>Let us take a closer look to this function.</p>
+
+<h5>The view update.</h5>
+
+<p><code>javascipt
+    function display_snippet(snippet) {
+    content =
+        &lt;li&gt;
+            &lt;h2&gt;{snippet.title} by {snippet.user}&lt;/h2&gt;&lt;br&gt;
+        &lt;div&gt;{Markdown.xhtml_of_string({detect_text_links: true}, snippet.code)}&lt;/div&gt;
+        &lt;/li&gt;;
+    Dom.transform([{jq : #snippet-list, subject : {content : content}, verb : {append}}])
+    }
+</code></p>
+
+<p>The view update according to the model is quite simple.
+We just have to build the new element to be inserted within the web page and then we update the <em>snippets</em> list with this new element.</p>
+
+<p>When creating the web page, we have defined a place where to display the <em>snippets</em> contained in the model :</p>
+
+<p><code>javascript
+        &lt;ul id="snippet-list" style="list-style: none;"&gt;
+        &lt;li data-template&gt;
+            &lt;hr&gt;
+        &lt;/li&gt;
+        &lt;/ul&gt;
+</code></p>
+
+<p>We just need to tell the DOM that this list is going to have one more element, the new <em>snippet</em>, which is done this way :</p>
+
+<p><code>javascript
+Dom.transform([{jq : #snippet-list, subject : {content : content}, verb : {append}}])
+</code></p>
+
+<p>The fnuction <strong>Dom.transform</strong> takes as first argument an element of the web page to be modified (here get through its id <em>snippet-list</em>), and as second argument the way to modify it (this can be either an adding at the end, an adding at the begenning or a replacement).
+In this exemple we use the value <code>{append}</code> which means that we want to add content at the end.</p>
+
+<h5>Error management.</h5>
+
+<p>We have added in this exemple a first level of error management.</p>
+
+<p>If all the fields are not filled, an error message is displayed at the bottom of the page to let the user know that something went wrong, and no data is send to the server.
+This allows to control the form structure on the client side without any request send to the server to see that some datas are missing.
+This does not allow to get rid of a more careful control of the datas on the server side, especially to check their content to avoid any security threats.</p>
+
+<p><code>javascript
+    if (title == "" || code == "" || user == "") {
+        message = {alert : {title : "Error", description : &lt;&gt; All fields are mandatory. Please fill them all. &lt;/&gt;}, closable : true};
+        alert = WBootstrap.Alert.make(message, {error});
+        Dom.transform([{jq : #notifications, subject : {content : alert}, verb : {set}}]);
+    }
+</code></p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_error_server.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<h4>The controler.</h4>
+
+<p>In this exemple the code of the controler is more simpler and shorter since we dont have any more to handle <strong>REST</strong> requests as we had to in the previous tutorial.
+A simple URL parser is sufficient to have our application running (we only have one page to display).</p>
+
+<p>````javascript
+module Controller {</p>
+
+<pre><code>dispatcher = parser {
+        | "/" -&gt; View.simple_main_page()
+        | (.*) -&gt; Resource.page("Hello", &lt;&gt;&lt;h2&gt;"404 NOT FOUND!"&lt;/h2&gt;&lt;/&gt;)
+}
+</code></pre>
+
+<p>}</p>
+
+<p>Server.start(Server.http, {custom : Controller.dispatcher})
+````</p>
+
+<h4>Let us test this application.</h4>
+
+<p>Once the application compiled and running, open your web brower at the address <code>`localhost:8080</code> which is the default address of your server.
+You can see that the web page already displays the 3 <em>snippets</em> created at the server start.
+The model and the view are synchronized when the server starts.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_1.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>Enter a title and a code for your new <em>snippet</em> and your name, and then click on the button 'Add a snippet'.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_2.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<p>You cna see that the view has been updated with your new <em>snippet</em> displayed in the top of the list.</p>
+
+<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/snippets_v2_3.png?raw=true" alt="snippets<em>v2</em>error<em>server</em>2.png" title="" /></p>
+
+<h4>Conclusion.</h4>
+
+<p>We have seen how to manipulate the DOM and synchronize a view and a model in <strong>Opa</strong> compare to how this is done by the framework <strong>Backbone.js</strong>.</p>
+
+<p>We will see in some further tutorials how :
+- to manage persistence through a <strong>NoSQL</strong> database (in this case <strong>MongoDB</strong>),
+- etc.</p>
