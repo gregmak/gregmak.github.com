@@ -1,183 +1,333 @@
-<h2>How the buil <strong>RESTful</strong> web service in <strong>Opa</strong>.</h2>
+<h1>
+How the buil <strong>RESTful</strong> web service in <strong>Opa</strong>.</h1>
 
-<p>This tutorial will show how to handle in <strong>Opa</strong> HTTP requests of type <strong>REST</strong> and will allow us to compare <strong>Opa</strong> with <strong>Express.js</strong>, framework that makes easier the developpement of web services <strong>RESTful</strong> in JavaScript.</p>
+This tutorial will show how to handle in <strong>Opa</strong> HTTP requests of type <strong>REST</strong> and will allow us to compare <strong>Opa</strong> with <strong>Express.js</strong>, framework that makes easier the developpement of <strong>RESTful</strong> web services in JavaScript.
 
-<p>For that, we will write a small application that allow to handle <strong>REST</strong> requests such as <strong>POST</strong>, <strong>PUT</strong>, <strong>DELETE</strong> and <strong>GET</strong> and to manipulate resources accordingly.
-This application is inspired from the one developped by <strong>k33g_org</strong> and for which you can see the tutorial at <a href="http://k33g.github.com/2012/02/19/EXPRESSJS</em>IS_PLAY.html">http://k33g.github.com/2012/02/19/EXPRESSJS_IS_PLAY.html.</a></p>
+For that, we will write a small application that allow to handle <strong>REST</strong> requests such as <strong>POST</strong>, <strong>PUT</strong>, <strong>DELETE</strong> and <strong>GET</strong> and to manipulate resources accordingly.
+This application is inspired by the one developped by <strong>k33g_org</strong> and for which you can see the tutorial at <a href="http://k33g.github.com/2012/02/19/EXPRESSJS_IS_PLAY.html">http://k33g.github.com/2012/02/19/EXPRESSJS_IS_PLAY.html.</a>
 
-<h4>Prerequisite.</h4>
+<h2>
+1. Prerequisite.</h2>
+You need to install <strong>Opa</strong>, downloadable from the <a href="http://opalang.org">opalang</a> website, or from the <a href="https://github.com/MLstate/opalang">github repo of opalang</a>.
+Once <strong>Opa</strong> installed, you should have everything you need. There is no other dependencies to install (<strong>Node.js</strong> is automatically installed if it is not detected during configuration).
 
-<p>You need to install <strong>Opa</strong>, downloadable from the <a href="http://opalang.org">opalang</a> website, or from the <a href="https://github.com/MLstate/opalang">github repo of opalang</a>.
-Once <strong>Opa</strong> installed, you should have everything you need. There is no other dependencies to install (<strong>Node.js</strong> is automatically installed if it is not detected during configuration).</p>
+<h2>
+2. Application skeleton.</h2>
+<strong>Opa</strong> comes with a tool that allows you to generate a skeleton of an application, based on the MVC model.
+In a terminal just write :
+<pre><code>opa create snippets</code></pre>
+where <em>snippets</em> is the name of the application.
+This will create a directory <em>snippets</em> containing the application skeleton (for more details on this tool, see the <a href="http://blog.opalang.org/2012/06/programming-tools-ux-how-we-simplified.html">article from C&eacute;dric Soulas on the opalang blog</a>).
 
-<h4>Application skeleton.</h4>
-
-<p><strong>Opa</strong> comes with a tool that allows you to generate a skeleton of an application, based on the MVC model.
-In a terminal just write :</p>
-<ode>opa create snippets</code>
-<p>where <em>snippets</em> is the name of the application.
-<br/>
-This will create a directory <em>snippets</em> containing the application skeleton (for more details on this tool, see the <a href="http://blog.opalang.org/2012/06/programming-tools-ux-how-we-simplified.html">article from C&eacute;dric Soulas on the opalang blog</a>).</p>
-
-<h4>Configuration.</h4>
-
-<p>A file nammed <code>opa.conf</code> is placed at the root of the application and describes the needed importations for each file, wether it is elements from the <strong>Opa</strong> standard library or one of the other source file of the application. Edit this file and modify it like this :</p>
-
-<p>```javascript
+<h2>
+3. Configuration.</h2>
+A file nammed <code>opa.conf</code> is placed at the root of the application and describes the needed importations for each file, wether it is elements from the <strong>Opa</strong> standard library or one of the other source file of the application. Edit this file and modify it like this :
+<pre><code>
 snippets.controller:
-    import snippets.view
-    import snippets.model // new line added
-    src/controller.opa</p>
+  import snippets.view
+  import snippets.model // new line added
+  src/controller.opa
 
-<p>snippets.view:
-    import snippets.model
-    import stdlib.themes.bootstrap
-    src/view.opa</p>
+snippets.view:
+  import snippets.model
+  import stdlib.themes.bootstrap
+  src/view.opa
 
-<p>snippets.model:
-    src/model.opa
-```</p>
+snippets.model:
+  src/model.opa
+</code></pre>
+Adding the line <code>import snippets.model</code> indicates to the compiler that the module <strong>Controller</strong> from the file <code>src/controller.opa</code> needs to access some functions defined in the module <strong>Model</strong> from the file <code>src/model.opa</code>.
 
-<p>Adding the line <code>import snippets.model</code> indicates to the compiler that the module <strong>Controller</strong> from the file <code>src/controller.opa</code> needs to access some functions defined in the module <strong>Model</strong> from the file <code>src/model.opa</code>.</p>
+Note that these declarations could have been placed at the begening of each file. But using the file <code>opa.conf</code> has the advantage to centralize them all.
 
-<p>Note that these declarations could have been placed at the begening of each file. But using the file <code>opa.conf</code> has the advantage to centralize all these declarations.</p>
+<h2>
+4. The model.</h2>
+Once the skeleton created, we modify the file <code>src/model.opa</code> to include the definition of a <em>snippet</em> and the related functions.
+<pre><code>
+type Snippet.t = {option(int) id, string title, string code, string user}
 
-<h4>The model.</h4>
+module Model {
 
-<p>Once the skeleton created, we are going to modify the file <code>src/model.opa</code> to include the definition of a <em>snippet</em> and the related functions.</p>
+    // the user context that will store the list of snippets
+    UserContext.t(list(Snippet.t)) snippets = UserContext.make([]);
 
-<p>```javascript
-type Snippet.t = {option(int) id, string title, string code, string user}</p>
+    function make_snippet(title, code, user) {
+ {id: {none}, ~title, ~code, ~user}
+    }
 
-<p>module Model {</p>
+    function save_snippet(snippet, callback) {
+ match (snippet.id) {
+ case {some : id}: // existing snippet
+     UserContext.change((function(snippets) {
+  snippets = List.remove_p((function(snippet) {snippet.id == {some: id}}), snippets);
+  List.cons(snippet, snippets);
+     }), snippets);
+     // applying the callback onto the given snippet
+     callback(snippet);
+ default: // new snippet
+     l = UserContext.execute((function(snippets) {List.length(snippets)}), snippets);
+     id = if (l >= 5) {some : 1} else {some : l + 1}
+     snippet = {snippet with ~id}
+     UserContext.change((function(snippets) {
+  // the list is reinitiallized every 5 snippets
+  if (l >= 5) [snippet]
+  else List.cons(snippet, snippets)
+     }), snippets);
+     // applying the callback onto the updated snippet
+     callback(snippet);
+ };
+    }
 
-<pre><code>// the user context that will store the list of snippets
+    function delete_snippet(id, callback) {
+ match (find_by_id(id)) {
+ case {some: snippet} :
+     UserContext.change((function(snippets) {
+  List.remove_p((function(snippet) {snippet.id == id}), snippets);
+     }), snippets);
+     // applying the callback onto the found snippet
+     callback(snippet);
+ default : Resource.source("\{\"toto\":\"ERROR\"}", "application/json");
+ }
+    }
+
+    function find_all(callback) {
+ UserContext.execute((function(snippets) {
+     callback(snippets);
+ }), snippets);
+    }
+
+    function find_by_id(id) {
+ UserContext.execute((function(snippets) {
+     List.find((function(snippet) {snippet.id == id}), snippets);
+ }), snippets);
+    }
+
+}
+</code></pre>
+This file does not present any difficulties if you are familiar with <strong>Opa</strong> and/or the functional programming.
+The only particularity is the use of the <strong>UserContext</strong>.
+
+<h4>
+4.1. Type definitions.</h4>
+This code begins with the declaration of the type of a <em>snippet</em>. We see that a <em>snippet</em> is comopsed by an identifier, a title, a code and the name of the creator.
+<pre><code>
+type Snippet.t = {option(int) id, string title, string code, string user}
+</code></pre>
+All these fields exept the identifier are string. The identifier is an optional integer (which means that it can be omitted).
+
+<h4>
+4.2. UserContext.</h4>
+This module, bellonging to the <strong>Opa</strong> standard library, is one way <strong>Opa</strong> offers to create mutable elements.
+
+Declaring a user context is maid by calling <strong>UserContext.make()</strong> with the default state as argument :
+<pre><code>
 UserContext.t(list(Snippet.t)) snippets = UserContext.make([]);
+</code></pre>
+The user context will be store in the variable nammed <em>snippets</em> and will contain a list of snippets.
+So the default state we need in order to initialize this context is an empty list : [ ].
 
-function make_snippet(title, code, user) {
-{id: {none}, ~title, ~code, ~user}
-}
-
-function save_snippet(snippet, callback) {
-match (snippet.id) {
-case {some : id}: // existing snippet
+Once we have declared our user context, we can modify its internal state by calling the function <strong>UserContext.change()</strong> that takes as argument a fonction to be applied on this state to modify it.
+<pre><code>
+function add_snippet(snippet) {
     UserContext.change((function(snippets) {
-    snippets = List.remove_p((function(snippet) {snippet.id == {some: id}}), snippets);
-    List.cons(snippet, snippets);
+        List.cons(snippet, snippets);
     }), snippets);
-    // applying the callback onto the given snippet
-    callback(snippet);
-default: // new snippet
-    l = UserContext.execute((function(snippets) {List.length(snippets)}), snippets);
-    id = if (l &gt;= 5) {some : 1} else {some : l + 1}
-    snippet = {snippet with ~id}
-    UserContext.change((function(snippets) {
-    // the list is reinitiallized every 5 snippets
-    if (l &gt;= 5) [snippet]
-    else List.cons(snippet, snippets)
-    }), snippets);
-    // applying the callback onto the updated snippet
-    callback(snippet);
-};
-}
-
-function delete_snippet(id, callback) {
-match (find_by_id(id)) {
-case {some: snippet} :
-    UserContext.change((function(snippets) {
-    List.remove_p((function(snippet) {snippet.id == id}), snippets);
-    }), snippets);
-    // applying the callback onto the found snippet
-    callback(snippet);
-default : Resource.source("\{\"toto\":\"ERROR\"}", "application/json");
-}
-}
-
-function find_all(callback) {
-UserContext.execute((function(snippets) {
-    callback(snippets);
-}), snippets);
-}
-
-function find_by_id(id) {
-UserContext.execute((function(snippets) {
-    List.find((function(snippet) {snippet.id == id}), snippets);
-}), snippets);
 }
 </code></pre>
+The function to be applied on the current state will add the given snippet to the list of snippets contained within the user context <em>snippets</em>.
 
-<p>}
-```</p>
-
-<p>This file does not present any difficulties if you are familiar with <strong>Opa</strong> and/or the functional programming.</p>
-
-<p>The code begins with the declaration of the type of a <em>snippet</em>. We see that a <em>snippet</em> is comopsed by an identifier, a title, a code and the name of the creator.
-The only particularity is the use of the <strong>UserContext</strong>. This module, bellonging to the <strong>Opa</strong> standard library, is one way <strong>Opa</strong> offers to allow to create mutable elements.</p>
-
-<h4>The view.</h4>
-
-<p>We are now going to edit the file <code>src/view.opa</code> to define the page structure.</p>
-
-<p>```javascript
-module View {</p>
-
-<pre><code>function initialize() {
-snippet_one = Model.make_snippet("essai 1","//FOO","gregmak");
-snippet_two = Model.make_snippet("essai 2","//Hello World","gregmak");
-snippet_three = Model.make_snippet("essai 3","//Me again !","gregmak");
-
-function foo(snippet) {
-    jlog(snippet.title);
-};
-
-Model.save_snippet(snippet_one, foo);
-Model.save_snippet(snippet_two, foo);
-Model.save_snippet(snippet_three, foo);
-}
+We have declared our user context and seen how to change its state. This is neat, but quite useless without being able to do something with this user context and its state.
+To manuipulate the current state of our user context we need to call the function <strong>UserContext.execute()</strong> that takes as argument a function to be applied on this state.
+<pre><code>
+    function find_by_id(id) {
+         UserContext.execute((function(snippets) {
+             List.find((function(snippet) {snippet.id == id}), snippets);
+         }), snippets);
+    }
 </code></pre>
+The function to be applied on the current state of the user context will search in the list of snippets for a snippet with the given id and returns it if it is found.
 
-<p>function simple<em>main</em>page() {
-      content =
-    <div onready={function(_) {initialize()}}> // we initialize the list of <em>snippets</em> when the page has been loaded
-    </div>;
-    Resource.page("Hello", content)
+<h2>
+5. The view.</h2>
+Now that we have defined our model, we need to edit the file <code>src/view.opa</code> to define the page structure.</p>
+<pre><code>
+module View {
+
+    function initialize() {
+ snippet_one = Model.make_snippet("essai 1","//FOO","gregmak");
+ snippet_two = Model.make_snippet("essai 2","//Hello World","gregmak");
+ snippet_three = Model.make_snippet("essai 3","//Me again !","gregmak");
+
+ function foo(snippet) {
+     jlog(snippet.title);
+ };
+
+ Model.save_snippet(snippet_one, foo);
+ Model.save_snippet(snippet_two, foo);
+ Model.save_snippet(snippet_three, foo);
+
+    }
+
+    function simple_main_page() {
+ content =
+     &lt;div&gt;
+     &lt;h2 onready={function(_) {initialize()}}&gt;"Opa VS Express.js"&lt;/h2&gt;
+     &lt;/div&gt;;
+ Resource.page("Hello", content)
+    }
+
 }
-```</p>
+</pre>
+</code>
+Note that you can directly write <strong>HTML</strong> code inside <strong>Opa</strong> code. The web page creation in <strong>Opa</strong> is not the topic of this tutorial, so we will set with a simple white page, enough to correctly run the application. We just need to fill the <em>snippet</em> list when the page is loaded.
 
-<p>Note that you can directly write HTML code inside <strong>Opa</strong> code. The web page creation in <strong>Opa</strong> is not the topic of this tutorial, so we will set with a simple white page, enough to correctly run the application. We just need to fill the <em>snippet</em> list when the page is loaded.</p>
+<h2>
+6. The controler.</h2>
+We need now to to define the server, the dispatcheur and the treatments of the <strong>REST</strong> requests.
+This will be done in the file <code>src/controller.opa</code>.
+<pre><code>
+module Controller {
 
-<h4>The controler.</h4>
+    function save_snippet(snippet) {
+     Model.save_snippet(snippet, function(snippet){
+         Resource.json(OpaSerialize.Json.serialize(snippet));
+     })
+    }
 
-<p>We now have to to define the server, the dispatcheur and the treatments of the <strong>REST</strong> requests.
-This will be done in the file <code>src/controller.opa</code>, which we are going to modify like this :</p>
+    function parse_query(callback) {
+     match (HttpRequest.get_body()) {
+ case {some : body} -> {
+         p = parser {
+          | s = UriParser.query_element -> {
+   match (s) {
+   case ("model", model) : callback(model);
+   default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
+   }
+      }
+      | (.*) -> Resource.json({String : "ERROR DURING REQUEST PARSING"});
+     };
+     Parser.parse(p, body)
+ }
+ default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
+ }
+    }
 
-<p>```javascript
-module Controller {</p>
+    function create_snippet() {
+     parse_query(function(model) {
+         match (OpaSerialize.String.unserialize(model)) {
+         case {some: value} :
+      snippet = Model.make_snippet(value.title, value.code, value.user);
+      save_snippet(snippet);
+         default : error("error during snippet creation");
+         }
+     })
+    }
 
-<p>function save<em>snippet(snippet) {
-        Model.save</em>snippet(snippet, function(snippet){
-            Resource.json(OpaSerialize.Json.serialize(snippet));
-        })
-    }</p>
+    function update_snippet() {
+ parse_query(function(model) {
+     match (OpaSerialize.partial_unserialize(model)) {
+     case {some : json} :
+      match (OpaSerialize.Json.unserialize_unsorted(json)) {
+      case {some: snippet} : save_snippet(snippet)
+      default : error("error during snippet update");
+      }
+     default:  error("error during snippet update");
+     }
+ })
+    }
 
-<pre><code>function parse_query(callback) {
-    match (HttpRequest.get_body()) {
-    case {some : body} -&gt; {
-        p = parser {
-            | s = UriParser.query_element -&gt; {
-        match (s) {
-        case ("model", model) : callback(model);
-        default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
-        }
-        }
-        | (.*) -&gt; Resource.json({String : "ERROR DURING REQUEST PARSING"});
-    };
-    Parser.parse(p, body)
+    function delete_snippet() {
+ parse_query(function(model) {
+         match (OpaSerialize.String.unserialize(model)) {
+         case {some: value} :
+      Model.delete_snippet({some: value.id}, function(snippet){
+      Resource.json(OpaSerialize.Json.serialize(snippet));
+      });
+         default: error("error during snippet deletion");
+         }
+ })
+    }
+
+    function get_snippet(path) {
+     p = parser {
+      | s = UriParser.query ->
+      match (s) {
+      case [("model", model) | _] -> {
+          match (Json.deserialize(model)) {
+          case {some: {Record: [(_, {Int : id})]}}:
+       match (Model.find_by_id({some: id})) {
+       case {some: snippet} : Resource.json(OpaSerialize.Json.serialize(snippet));
+       default : error("error during snippet get");
+       };
+          default: error("error during snippet get");
+          };
+      }
+      default -> error("error during snippet get")
+  }
+      | (.*) -> Resource.source("\{\"foo\":\"POST KO\"}", "application/json");
+     };
+     Parser.parse(p, path);
+    }
+
+    function get_all_snippets() {
+        Model.find_all(function(snippets){
+     list = List.map((function(snippet) {OpaSerialize.Json.serialize(snippet)}), snippets);
+     Resource.json({List : list})
+ });
+    }
+
+    /*  THE SERVER AND THE DISPATCHER */
+
+    dispatcher = parser {
+         | "/" -> View.simple_main_page()
+         | "/snippets" -> get_all_snippets();
+         | "/snippet" path=(.*) -> {
+      match (HttpRequest.get_method()) {
+      case {some: {post}}: create_snippet();
+      case {some: {put}}: update_snippet();
+      case {some: {get}}: get_snippet(Text.to_string(path));
+      case {some: {delete}}: delete_snippet();
+      default: error("error during method inspection");
+      }
+         }
+         | (.*) -> Resource.page("Hello", &lt;h2&gt;"404 NOT FOUND!"&lt;/h2&gt;)
+    }
+
 }
-default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
-}
-}
 
+Server.start(Server.http, {custom : Controller.dispatcher})
+</code></pre>
+This file presents several key concepts that we are going to look closer.
+
+<h4>
+6.1. Treatment of HTTP requests and methods :</h4>
+An <strong>Opa</strong> server is associated with an URL handler, which is an URL parser : according to the received URL, we redirect to specific treatments or pages.
+This is the equivalent of the <strong>app.routes</strong> object of <strong>Express.js</strong> and of the class <strong>Router</strong> of <strong>Backbone.js</strong>. The <em>dispatcher</em> variable handles this.
+<pre><code>
+    dispatcher = parser {
+         | "/" -> View.simple_main_page()
+         | "/snippets" -> get_all_snippets();
+         | "/snippet" path=(.*) -> {
+      match (HttpRequest.get_method()) {
+      case {some: {post}}: create_snippet();
+      case {some: {put}}: update_snippet();
+      case {some: {get}}: get_snippet(Text.to_string(path));
+      case {some: {delete}}: delete_snippet();
+      default: error("error during method inspection");
+      }
+         }
+         | (.*) -> Resource.page("Hello", &lt;h2&gt;"404 NOT FOUND!"&lt;/h2&gt;)
+    }
+</code></pre>
+The first thing to be done is to get the method used to send the request, which we can get by calling the function <strong>HttpRequest.get_method()</strong>.
+Then by doing a pattern-matching on this method, we can perform a specific action accordingly.
+
+For instance, for the request <strong>POST</strong>, the function <strong>HttpRequest.get_method()</strong> returns <code>{some : {post}}</code> and we can see that the <em>dispatcher</em> associates to this value the function <strong>create_snippet</strong> :
+<pre><code>
+case {some : {post}}: create_snippet();
+</code></pre>
+Let's have a closer look to this function :
+<pre><code>
 function create_snippet() {
     parse_query(function(model) {
         match (OpaSerialize.String.unserialize(model)) {
@@ -188,187 +338,59 @@ function create_snippet() {
         }
     })
 }
-
-function update_snippet() {
-    parse_query(function(model) {
-    match (OpaSerialize.partial_unserialize(model)) {
-    case {some : json} :
-        match (OpaSerialize.Json.unserialize_unsorted(json)) {
-        case {some: snippet} : save_snippet(snippet)
-        default : error("error during snippet update");
-        }
-    default:  error("error during snippet update");
-    }
-})
-}
-
-function delete_snippet() {
-    parse_query(function(model) {
-        match (OpaSerialize.String.unserialize(model)) {
-        case {some: value} :
-        Model.delete_snippet({some: value.id}, function(snippet){
-        Resource.json(OpaSerialize.Json.serialize(snippet));
-        });
-        default: error("error during snippet deletion");
-        }
-})
-}
-
-function get_snippet(path) {
-    p = parser {
-        | s = UriParser.query -&gt;
-        match (s) {
-        case [("model", model) | _] -&gt; {
-            match (Json.deserialize(model)) {
-            case {some: {Record: [(_, {Int : id})]}}:
-            match (Model.find_by_id({some: id})) {
-            case {some: snippet} : Resource.json(OpaSerialize.Json.serialize(snippet));
-            default : error("error during snippet get");
-            };
-            default: error("error during snippet get");
-            };
-        }
-        default -&gt; error("error during snippet get")
-    }
-        | (.*) -&gt; Resource.source("\{\"toto\":\"POST KO\"}", "application/json");
-    };
-    Parser.parse(p, path);
-}
-
-function get_all_snippets() {
-    Model.find_all(function(snippets){
-    list = List.map((function(snippet) {OpaSerialize.Json.serialize(snippet)}), snippets);
-    Resource.json({List : list})
-});
-}
-
-/*  LE SERVEUR AVEC LE GESTIONNAIRE DE REQUETES */
-
-dispatcher = parser {
-        | "/" -&gt; View.simple_main_page()
-        | "/snippets" -&gt; get_all_snippets();
-        | "/snippet" path=(.*) -&gt; {
-        match (HttpRequest.get_method()) {
-        case {some: {post}}: create_snippet();
-        case {some: {put}}: update_snippet();
-        case {some: {get}}: get_snippet(Text.to_string(path));
-        case {some: {delete}}: delete_snippet();
-        default: error("error during method inspection");
-        }
-        }
-        | (.*) -&gt; Resource.page("Hello", &lt;&gt;&lt;h2&gt;"404 NOT FOUND!"&lt;/h2&gt;&lt;/&gt;)
-}
-</code></pre>
-
-<p>}</p>
-
-<p>Server.start(Server.http, {custom : Controller.dispatcher})
-```</p>
-
-<p>This file presents several key concepts that we are going to look closer.</p>
-
-<h5>Treatment of HTTP requests and methods :</h5>
-
-<p>An <strong>Opa</strong> server is associated with an URL handler, which is an URL parser : according to the received URL, we redirect to specific treatments or pages.
-This is the equivalent of the <strong>app.routes</strong> object of <strong>Express.js</strong> and of the class <strong>Router</strong> of <strong>Backbone.js</strong>. The <em>dispatcher</em> variable handles this.</p>
-
-<p><code>javascript
-    dispatcher = parser {
-            | "/" -&gt; View.simple_main_page()
-            | "/snippets" -&gt; get_all_snippets();
-            | "/snippet" path=(.*) -&gt; {
-            match (HttpRequest.get_method()) {
-            case {some: {post}}: create_snippet();
-            case {some: {put}}: update_snippet();
-            case {some: {get}}: get_snippet(Text.to_string(path));
-            case {some: {delete}}: delete_snippet();
-            default: error("error during method inspection");
-            }
-            }
-            | (.*) -&gt; Resource.page("Hello", &lt;&gt;&lt;h2&gt;"404 NOT FOUND!"&lt;/h2&gt;&lt;/&gt;)
-    }
-</code></p>
-
-<p>We handle <strong>REST</strong> type requests by getting the associated method (with the function <strong>HttpRequest.get_method</strong> of the <strong>Opa</strong> standard library) and performing a specific treatment accordingly.
-For that, we perform a <em>pattern-matching</em> on the returned result.</p>
-
-<p>For instance, in the case of the request <strong>POST</strong>, the function <strong>HttpRequest.get<em>method</strong> returns <code>{some : {post}}</code> and we can see that the *dispatcher* associates to this value the function <strong>create</em>snippet</strong> :</p>
-
-<p><code>javascript
-case {some : {post}}: create_snippet();
-</code></p>
-
-<p>Let's have a closer look to this function :</p>
-
-<p><code>javascript
-    function create_snippet() {
-        parse_query(function(model) {
-            match (OpaSerialize.String.unserialize(model)) {
-            case {some: value} :
-            snippet = Model.make_snippet(value.title, value.code, value.user);
-            save_snippet(snippet);
-            default : error("error during snippet creation");
-            }
-        })
-    }
-</code></p>
-
-<p>The function <strong>create<em>snippet</strong> make a call to the function <strong>parse</em>query</strong> and give it the treatment function (which we will see later).
-Let's first have a look at the function <strong>parse_query</strong> :</p>
-
-<p><code>javascript
-    function parse_query(callback) {
-        match (HttpRequest.get_body()) {
-        case {some : body} -&gt; {
-            p = parser {
-                | s = UriParser.query_element -&gt; {
+</pre>
+</code>
+The function <strong>create_snippet</strong> makes a call to the function <strong>parse_query</strong> and give it the treatment function (which we will see later).
+Let's first have a look at the function <strong>parse_query</strong> :
+<pre><code>
+function parse_query(callback) {
+    match (HttpRequest.get_body()) {
+    case {some : body} -&gt; {
+        p = parser {
+          | s = UriParser.query_element -&gt; {
             match (s) {
             case ("model", model) : callback(model);
             default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
             }
-            }
-            | (.*) -&gt; Resource.json({String : "ERROR DURING REQUEST PARSING"});
+          }
+          | (.*) -&gt; Resource.json({String : "ERROR DURING REQUEST PARSING"});
         };
         Parser.parse(p, body)
     }
     default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
     }
-    }
-</code></p>
+}
+</code></pre>
+We first need to get the body of the request (with the function <strong>HttpRequest.get_body</strong> of the <strong>Opa</strong> standard library).
+Once this body recovered, we need to analyze it to get the elements constituting the request, which is made with an <strong>URI</strong> parser, and last, apply the treatment function (<em>callback</em>, given as parameter) on these elements.
 
-<p>We first need to get the body of the request (with the function <strong>HttpRequest.get_body</strong> of the <strong>Opa</strong> standard library).
-Once this body recovered, we need to analyze it to get the elements constituting the request, which is made with an <strong>URI</strong> parser, and last, apply the treatment function (<em>callback</em>, given as parameter) on these elements.</p>
+<h4>
+6.2. Treatment of JSON datas.</h4>
+We have seen how the elements constituting the request have been recovered.
+Let's now see how we can manipulate these elements.
 
-<h5>Treatment of JSON datas.</h5>
-
-<p>We have seen how the elements constituting the request have been recovered.
-Let's now see how we can manipulate these elements.</p>
-
-<p>Remember the code of the function <strong>create_snippet</strong> :</p>
-
-<p><code>javascript
-    function create_snippet() {
-        parse_query(function(model) {
-            match (OpaSerialize.String.unserialize(model)) {
-            case {some: value} :
-            snippet = Model.make_snippet(value.title, value.code, value.user);
-            save_snippet(snippet);
-            default : error("error during snippet creation");
-            }
-        })
-    }
-</code></p>
-
-<p>The elements constituting the request are recovered as a string representing a data with the JSON format.
+Remember the code of the function <strong>create_snippet</strong> :
+<pre><code>
+function create_snippet() {
+    parse_query(function(model) {
+        match (OpaSerialize.String.unserialize(model)) {
+        case {some: value} :
+        snippet = Model.make_snippet(value.title, value.code, value.user);
+        save_snippet(snippet);
+        default : error("error during snippet creation");
+        }
+    })
+}
+</code></pre>
+The elements constituting the request are recovered as a string representing a data with the JSON format.
 So we have to deserialize this string to recover a manipulated element.
 This is made by the call to the function <strong>OpaSerialize.String.unserialize</strong> that takes as argument a string and returns a corresponding <em>record</em>.
-We can now create a new <em>snippet</em> from the fields <strong>title</strong>, <strong>code</strong> and <strong>user</strong> from the new created <em>record</em>, and save it.</p>
+We can now create a new <em>snippet</em> from the fields <strong>title</strong>, <strong>code</strong> and <strong>user</strong> from the new created <em>record</em>, and save it.
 
-<p>Note that we can also, from a string representing an object of a known type described with the JSON format, directly build the corresponding object.
-This is made, for exemple, in the funciton <strong>update_snippet</strong> :</p>
-
-<p><code>javascript
-    function update_snippet() {
+Note that we can also, from a string representing an object of a known type described with the JSON format, directly build the corresponding object.
+This is made, for exemple, in the funciton <strong>update_snippet</strong> :
+<pre><code>
+function update_snippet() {
     parse_query(function(model) {
         match (OpaSerialize.partial_unserialize(model)) {
         case {some : json} :
@@ -379,22 +401,21 @@ This is made, for exemple, in the funciton <strong>update_snippet</strong> :</p>
         default:  error("error during snippet update");
         }
     })
-    }
-</code></p>
+}
+</code></pre>
+From the string, we make an object of type <em>RPC.Json.json</em> with the function <strong>OpaSerialize.partial_unserialize</strong>.
+We have now to deserialize this object with the function <strong>OpaSerialize.Json.unserialize_unsorted</strong> (<em>unsorted</em> because the fields inside the request are not sorted).
+And we finally get an object of type <em>Snippet.t</em> we can now save.
 
-<p>From the string, we make an object of type <em>RPC.Json.json</em> with the function <strong>OpaSerialize.partial<em>unserialize</strong>.
-We have now to deserialize this object with the function <strong>OpaSerialize.Json.unserialize</em>unsorted</strong> (<em>unsorted</em> because the fields inside the request are not sorted).
-And we finally get an object of type <em>Snippet.t</em> we can now save.</p>
+<h2>
+7. Let's test this application.</h2>
+We have completed the small application, it is time to test it.
+Once the application compiled and running, open your web brower at the address <code>localhost:8080</code> which is the default address of your server.
+Open the JavaScript console, and enter the following commands :
 
-<h4>Let's test this application.</h4>
-
-<p>We have completed the small application, it is time to test it.
-Once the application compiled and running, open your web brower at the address <code>`localhost:8080</code> which is the default address of your server.
-Open the JavaScript console, and enter the following commands :</p>
-
-<h5>Snippet creation.</h5>
-
-<p><code>javascript
+<h4>
+7.1. Snippet creation.</h4>
+<pre><code>
 $.ajax({
     type: "POST",
     url: "/snippet",
@@ -411,16 +432,15 @@ $.ajax({
         console.log(dataFromServer);
     }
 });
-</code></p>
+</code></pre>
 
-<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/post.png?raw=true" alt="post.png" title="" /></p>
+<img src="http://i.imgur.com/MCepI.png" />
+We can notice that the server returns the object with a new <em>id</em> associated.
+Since we already have defined 3 <em>snippets</em>, the new one has been created with <em>id</em> 4.
 
-<p>We can notice that the server returns the object with a new <em>id</em> associated.
-Since we already have defined 3 <em>snippets</em>, the new one has been created with <em>id</em> 4.</p>
-
-<h5>Snippet update.</h5>
-
-<p><code>javascript
+<h4>
+7.2. Snippet update.</h4>
+<pre><code>
 $.ajax({
     type: "PUT",
     url: "/snippet",
@@ -438,15 +458,14 @@ $.ajax({
         console.log(dataFromServer);
     }
 });
-</code></p>
+</code></pre>
 
-<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/put.png?raw=true" alt="put.png" title="" /></p>
+<img src="http://i.imgur.com/yK7c1.png"/>
+The server returns the object with the field <em>user</em> set at the new value.
 
-<p>The server returns the object with the field <em>user</em> set at the new value.</p>
-
-<h5>Searching a snippet.</h5>
-
-<p><code>javascript
+<h4>
+7.3. Searching a snippet.</h4>
+<pre><code>
 $.ajax({
     type: "GET",
     url: "/snippet",
@@ -459,15 +478,14 @@ $.ajax({
         console.log(dataFromServer);
     }
 });
-</code></p>
+</code></pre>
 
-<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/get.png?raw=true" alt="get.png" title="" /></p>
+<img src="http://i.imgur.com/zqIWv.png" />
+The server returns the object of <em>id</em> 1.
 
-<p>The server returns the object of <em>id</em> 1.</p>
-
-<h5>Snippet deletion.</h5>
-
-<p><code>javascript
+<h4>
+7.4. Snippet deletion.</h4>
+<pre><code>
 $.ajax({
     type: "DELETE",
     url: "/snippet",
@@ -480,13 +498,13 @@ $.ajax({
         console.log(dataFromServer);
     }
 });
-</code></p>
+</code></pre>
 
-<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/delete.png?raw=true" alt="delete.png" title="" /></p>
+<img src="http://i.imgur.com/pnzD9.png" />
 
-<h5>Getting all the snippets.</h5>
-
-<p><code>javascript
+<h4>
+7.5. Getting all the snippets.</h4>
+<pre><code>
 $.ajax({
     type: "GET",
     url: "/snippets",
@@ -501,17 +519,18 @@ $.ajax({
         });
     }
 });
-</code></p>
+</code></pre>
 
-<p><img src="https://github.com/gregmak/gregmak.github.com/blob/master/images/getAll.png?raw=true" alt="getAll.png" title="" /></p>
+<img src="http://i.imgur.com/pTr9q.png" />
+The server returns a list of 3 <em>snippets</em>, since <em>snippet</em> of <em>id</em> 1 has been previously deleted.
 
-<p>The server returns a list of 3 <em>snippets</em>, since <em>snippet</em> of <em>id</em> 1 has been previously deleted.</p>
+<h2>
+8. Conclusion.</h2>
+We have seen how to handle <strong>REST</strong> in <strong>Opa</strong> compared to what it is done by the <strong>Express.js</strong> framework.
 
-<h4>Conclusion.</h4>
-
-<p>We have seen how to handle <strong>REST</strong> in <strong>Opa</strong> compared to what it is done by the <strong>Express.js</strong> framework.</p>
-
-<p>We will see in other tutorials how :
-- manipulate the <strong>DOM</strong> to synchronise models and associated views,
-- handle persistence by using a <strong>NoSQL</strong> database (we have choosen for that <strong>MongoDB</strong>),
-- etc.</p>
+We will see in some further tutorials how :
+<ul>
+<li>manipulate the <strong>DOM</strong> to synchronise models and associated views</li>
+<li>handle persistence by using a <strong>NoSQL</strong> database (we have choosen for that <strong>MongoDB</strong>)</li>
+<li>etc.</li>
+</ul>
