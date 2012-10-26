@@ -1,82 +1,77 @@
 module Controller {
 
-    function save_snippet(snippet) {
-    	Model.save_snippet(snippet, function(snippet){
-    	    Resource.json(OpaSerialize.Json.serialize(snippet));
-    	})
+    default_json = Resource.json({String : "ERROR DURING REQUEST PARSING"});
+
+    function make_resource(snippet) {
+	Resource.json(OpaSerialize.Json.serialize(snippet));
     }
 
-    function parse_query(callback) {
-    	match (HttpRequest.get_body()) {
-	case {some : body} -> {
-    	    p = parser {
-    		    | s = UriParser.query_element -> {
-			match (s) {
-			case ("model", model) : callback(model);
-			default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
-			}
-		    }
-		    | (.*) -> Resource.json({String : "ERROR DURING REQUEST PARSING"});
-	    };
-	    Parser.parse(p, body)
-	}
-	default : Resource.json({String : "ERROR DURING REQUEST PARSING"});
-	}
+    function save_snippet(snippet) {
+    	Model.save_snippet(snippet, function (snippet) {
+	    make_resource(snippet);
+    	});
     }
 
     function create_snippet() {
-    	parse_query(function(model) {
-    	    match (OpaSerialize.String.unserialize(model)) {
-    	    case {some: value} :
+    	Toto.get_and_parse("model", default_json, function (model) {
+	    Toto.unserialize_default_string(model, default_json, function(value) {
     		snippet = Model.make_snippet(value.title, value.code, value.user);
     		save_snippet(snippet);
-    	    default : error("error during snippet creation");
-    	    }
-    	})
+	    });
+    	});
     }
 
     function update_snippet() {
-	parse_query(function(model) {
-	    match (OpaSerialize.partial_unserialize(model)) {
-	    case {some : json} :
-    		match (OpaSerialize.Json.unserialize_unsorted(json)) {
-    		case {some: snippet} : save_snippet(snippet)
-    		default : error("error during snippet update");
-    		}
-	    default:  error("error during snippet update");
-	    }
-	})
+    	jlog("\nupdate snippet");
+    	Toto.get_and_parse("model", default_json, function (model) {
+    	    jlog("get and parse OK = {model}");
+    	    Toto.partial_unserialize_default(model, default_json, function (json) {
+    		jlog("partial unserialize default OK = {json}");
+    		Toto.unserialize_default_json_unsorted(json, default_json, function(snippet) {
+    		    jlog("unserialize default json OK = {snippet}");
+    		    save_snippet(snippet);
+    		});
+    	    });
+    	});
     }
 
     function delete_snippet() {
-	parse_query(function(model) {
-    	    match (OpaSerialize.String.unserialize(model)) {
-    	    case {some: value} :
-    		Model.delete_snippet({some: value.id}, function(snippet){
-		    Resource.json(OpaSerialize.Json.serialize(snippet));
+	jlog("\ndelete snippet'");
+	Toto.get_and_parse("model", default_json, function (model) {
+	    jlog("get and parse OK = {model}'");
+	    Toto.unserialize_default_string(model, default_json, function (value) {
+		jlog("unserialize default string = {value}'");
+    		Model.delete_snippet({some: value.id}, function(res){
+		    Resource.json({String : res});
     		});
-    	    default: error("error during snippet deletion");
-    	    }
-	})
+	    });
+	});
     }
+
+    // function get_snippet(path) {
+    // 	Toto.get_and_parse_path(path, "model", default_json, function(value) {
+    // 	    Model.find_by_id({some: value.id}, default_json, function (snippet) {
+    // 		Resource.json(OpaSerialize.Json.serialize(snippet));
+    // 	    });
+    // 	});
+    // }
 
     function get_snippet(path) {
     	p = parser {
     		| s = UriParser.query ->
-    		match (s) {
-    		case [("model", model) | _] -> {
-    		    match (Json.deserialize(model)) {
+		match (List.assoc("model", s)) {
+		case {some: value} :
+    		    match (Json.deserialize(value)) {
     		    case {some: {Record: [(_, {Int : id})]}}:
     			match (Model.find_by_id({some: id})) {
-    			case {some: snippet} : Resource.json(OpaSerialize.Json.serialize(snippet));
-    			default : error("error during snippet get");
-    			};
-    		    default: error("error during snippet get");
-    		    };
-    		}
-    		default -> error("error during snippet get")
-		}
-    		| (.*) -> Resource.source("\{\"toto\":\"POST KO\"}", "application/json");
+			case {some: snippet} : make_resource(snippet);
+			default : default_json;
+			};
+		    default : default_json
+		    };
+		default: default_json
+		};
+    		| (.*) -> default_json
     	};
     	Parser.parse(p, path);
     }
@@ -88,7 +83,7 @@ module Controller {
 	});
     }
 
-    /*  LE SERVEUR AVEC LE GESTIONNAIRE DE REQUETES */
+    /*  THE SERVER WITH THE DISPATCHER */
 
     dispatcher = parser {
     	    | "/" -> View.simple_main_page()
@@ -99,7 +94,7 @@ module Controller {
     		case {some: {put}}: update_snippet();
     		case {some: {get}}: get_snippet(Text.to_string(path));
     		case {some: {delete}}: delete_snippet();
-    		default: error("error during method inspection");
+    		default: default_json
     		}
     	    }
     	    | (.*) -> Resource.page("Hello", <><h2>"404 NOT FOUND!"</h2></>)

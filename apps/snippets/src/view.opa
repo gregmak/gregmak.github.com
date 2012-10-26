@@ -1,18 +1,12 @@
 module View {
 
     function initialize() {
-	snippet_one = Model.make_snippet("essai 1","//FOO","gregmak");
-	snippet_two = Model.make_snippet("essai 2","//Hello World","gregmak");
-	snippet_three = Model.make_snippet("essai 3","//Me again !","gregmak");
-
-	function foo(snippet) {
-	    jlog(snippet.title);
+	function make_and_save(title, code, user) {
+	    Model.save_snippet(Model.make_snippet(title, code, user), function(_) {void});
 	};
-
-	Model.save_snippet(snippet_one, foo);
-	Model.save_snippet(snippet_two, foo);
-	Model.save_snippet(snippet_three, foo);
-
+	make_and_save("essai 1","//FOO","gregmak");
+	make_and_save("essai 2","//Hello World","gregmak");
+	make_and_save("essai 3","//Me again !","gregmak");
     }
 
     function simple_main_page() {
